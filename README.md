@@ -1,6 +1,11 @@
 # Baseball Bat Vibration Simulation
 
-A computational physics project that models the transverse vibration and oscillation dynamics of a baseball bat using Timoshenko beam theory. The bat is discretized into thin cross-sectional slices and the resulting coupled ODE system is integrated numerically to study how vibrations propagate along the bat after impact.
+A computational physics project that models the transverse vibration and oscillation dynamics of a baseball bat according to Alan Nathan (2000). The bat is discretized into thin cross-sectional slices and the resulting coupled ODE system is integrated numerically to study how vibrations propagate along the bat after impact. 
+
+➡️ TO COME ➡️
+- Implementing a time-dependent force from the ball to a slice of the bat
+- Understanding the ball's velocity as a function of coefficient of restitution (COR)
+- Modelling the energy loss from the collision
 
 ## Physics Overview
 
@@ -68,6 +73,8 @@ Builds the $2N \times 2N$ block-tridiagonal matrix $H$:
 $$H = \begin{pmatrix} H_1 & H_2 \\ H_4 & H_3 \end{pmatrix}$$
 
 where each block is an $N \times N$ tridiagonal matrix constructed from the material constants $\Lambda = S / (\rho \, dz^2)$ and $\Gamma = Y / (\rho \, dz^2)$, and the cross-section geometry $A_i$, $I_i$. Free-free boundary conditions are applied at both ends of the bat.
+
+See midterm report for a breakdown of the components of $\mathbf{H}$. 
 
 ### `plot_osc.py` — Visualization Utilities
 
