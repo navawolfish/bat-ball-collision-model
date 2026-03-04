@@ -1,0 +1,50 @@
+This is BibTeX, Version 0.99d (TeX Live 2024)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: sample7.aux
+The style file: aasjournalv7.bst
+Database file #1: sample7.bib
+Warning--entry type for "nathanPhysicsTorpedoBat2025" isn't style-file defined
+--line 1 of file sample7.bib
+Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
+You've used 3 entries,
+            3389 wiz_defined-function locations,
+            717 strings with 5250 characters,
+and the built_in function-call counts, 1112 in all, are:
+= -- 108
+> -- 36
+< -- 3
++ -- 12
+- -- 9
+* -- 87
+:= -- 195
+add.period$ -- 3
+call.type$ -- 3
+change.case$ -- 12
+chr.to.int$ -- 3
+cite$ -- 3
+duplicate$ -- 51
+empty$ -- 85
+format.name$ -- 15
+if$ -- 227
+int.to.chr$ -- 1
+int.to.str$ -- 0
+missing$ -- 5
+newline$ -- 17
+num.names$ -- 12
+pop$ -- 6
+preamble$ -- 1
+purify$ -- 12
+quote$ -- 0
+skip$ -- 51
+stack$ -- 0
+substring$ -- 65
+swap$ -- 12
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 27
+warning$ -- 0
+while$ -- 11
+width$ -- 0
+write$ -- 40
+(There was 1 warning)

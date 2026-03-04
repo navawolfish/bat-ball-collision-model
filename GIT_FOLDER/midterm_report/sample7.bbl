@@ -1,0 +1,17 @@
+\begin{thebibliography}{}
+\expandafter\ifx\csname natexlab\endcsname\relax\def\natexlab#1{#1}\fi
+\providecommand{\url}[1]{\href{#1}{#1}}
+\providecommand{\dodoi}[1]{doi:~\href{http://doi.org/#1}{\nolinkurl{#1}}}
+\providecommand{\doeprint}[1]{\href{http://ascl.net/#1}{\nolinkurl{http://ascl.net/#1}}}
+\providecommand{\doarXiv}[1]{\href{https://arxiv.org/abs/#1}{\nolinkurl{https://arxiv.org/abs/#1}}}
+
+\bibitem[{A. Nathan(2025)Nathan}]{nathanPhysicsTorpedoBat2025}
+Nathan, A. 2025, \bibinfo{title}{The {{Physics}} of the {{Torpedo Bat}},}
+
+\bibitem[{A.~M. Nathan(2000)Nathan}]{nathanDynamicsBaseballBat2000a}
+Nathan, A.~M. 2000, \bibinfo{title}{Dynamics of the Baseball--Bat Collision,} American Journal of Physics, 68, 979, \dodoi{10.1119/1.1286119}
+
+\bibitem[{L.~L. Van~Zandt(1992)Van~Zandt}]{zandt}
+Van~Zandt, L.~L. 1992, \bibinfo{title}{The dynamical theory of the baseball bat,} American Journal of Physics, 60, 172, \dodoi{10.1119/1.16939}
+
+\end{thebibliography}
