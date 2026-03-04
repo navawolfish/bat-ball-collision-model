@@ -4,9 +4,9 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd 
-from GIT_FOLDER.create_system_matrix import create_system_matrices, load_H_matrix
+from create_system_matrix import create_system_matrices, load_H_matrix
 from scipy.integrate import solve_ivp
-from GIT_FOLDER.plot_osc import rotate, make_box
+from plot_osc import rotate, make_box
 import matplotlib.animation as animation
 #%% PLOT SETTINGS
 plt.rcParams.update({
