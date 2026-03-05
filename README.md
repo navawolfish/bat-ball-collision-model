@@ -9,7 +9,7 @@ A computational physics project that models the transverse vibration and oscilla
 
 ## Physics Overview
 
-A baseball bat is modeled as a **non-uniform Timoshenko beam** — a tapered, free-free beam that accounts for both bending (Young's modulus $Y$) and shear deformation (shear modulus $S$). The bat is sliced into $N$ segments along its longitudinal axis, and for each slice $i$, the equations of motion couple two degrees of freedom:
+A baseball bat is modeled as a **non-uniform Timoshenko beam**. We assume a tapered, free-free beam that accounts for both bending (Young's modulus $Y$) and shear deformation (shear modulus $S$). The bat is sliced into $N$ segments along its longitudinal axis, and for each slice $i$, the equations of motion couple two degrees of freedom:
 
 - **$y_i(t)$** — transverse (vertical) displacement of slice $i$
 - **$\Phi_i(t)$** — rotation angle of the cross-section at slice $i$
