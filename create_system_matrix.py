@@ -45,16 +45,21 @@ def create_internal_matrices(N, Ai, Ii, dz, S, Y, rho):
     H2 = np.zeros((N, N)) # system matrix
     H3 = np.zeros((N, N)) # system matrix
     H4 = np.zeros((N, N)) # system matrix
+
+    #final matrix looks like [[H1, H2], [H3, H4]]
+
+
     #helper constants
     Lam = S / (rho * dz**2)
     Ups = Y / (rho * dz**2)
 
-    # Helpful note: A[:-1] is analogous to A_{i - 1} and A[1:] is analogous to A_{i}
+    # Helpful note: A[:-1] is analogous to A_{i - 1} and A[1:] is analogous to A_{i}, since i starts at index 2 in the equations. This allows us to create the diagonals for the sparse matrices without explicit loops.
+
     # H1 matrix
-    a = Lam * Ai[:-1]/Ai[1:]   # sub-diagonal
-    b = -Lam * (1 + Ai[:-1]/Ai[1:])  # main diagonal
+    a = Lam * Ai[:-1]/Ai[1:]   # i, i-1 entry, sub-diagonal
+    b = -Lam * (1 + Ai[:-1]/Ai[1:])  # i, i entry, main diagonal
     b = np.insert(b, 0, 0) #add fillers to b to make it length N
-    c = Lam * np.ones(N-1) # super-diagonal
+    c = Lam * np.ones(N-1) # i, i+1 entry, super-diagonal
 
     #Quadrant 1
     H1 = diags(
@@ -65,11 +70,11 @@ def create_internal_matrices(N, Ai, Ii, dz, S, Y, rho):
     )
 
     # H2 matrix
-    a = -Lam * Ai[:-1] / (2 * Ai[1:])  # sub-diagonal
-    b = Lam / 2 * (1 - Ai[:-1]/Ai[1:])  # main diagonal
+    a = -Lam * Ai[:-1] / (2 * Ai[1:])  # i, j-1 entry, sub-diagonal
+    b = Lam / 2 * (1 - Ai[:-1]/Ai[1:])  # i, j entry, main diagonal
     #add fillers to b to make it length N
     b = np.insert(b, 0, 0)
-    c = Lam / 2 * np.ones(N-1)  # super-diagonal
+    c = Lam / 2 * np.ones(N-1)  # i, j+1 entry, super-diagonal
 
     H2 = diags(
         diagonals=[a, b, c],
@@ -78,12 +83,14 @@ def create_internal_matrices(N, Ai, Ii, dz, S, Y, rho):
         format="csr"
     )
 
+    
+
     # H3 matrix
-    a = Ups * (Ii[:-1] / Ii[1:]) - Lam * Ai[:-1] * dz**2 / (4 * Ii[1:]) # sub-diagonal
-    b = -Ups * (1 + Ii[:-1] / Ii[1:]) - Lam * Ai[1:] * dz**2 / (4 * Ii[1:]) * (1 + Ai[:-1]/Ai[1:])  # main diagonal
+    a = Lam * Ai[:-1] * dz**2 / (2 * Ii[1:])  # j, i-1 entry, sub-diagonal
+    c = -Lam * Ai[1:] * dz**2 / (2 * Ii[1:])  # j, i+1 entry, super-diagonal
+    b = -c*(1 - Ai[:-1]/Ai[1:])  # j, i
     #add fillers to b to make it length N
     b = np.insert(b, 0, 0)
-    c = Ups * np.ones(N-1) - Lam * Ai[1:] * dz**2 / (4 * Ii[1:])  # super-diagonal
 
     H3 = diags(
         diagonals=[a, b, c],
@@ -91,13 +98,13 @@ def create_internal_matrices(N, Ai, Ii, dz, S, Y, rho):
         shape=(N, N),
         format="csr"
     )
-
+    
     # H4 matrix
-    a = Lam * Ai[:-1] * dz**2 / (2 * Ii[1:])  # j, i-1 entry, sub-diagonal
-    c = -Lam * Ai[1:] * dz**2 / (2 * Ii[1:])  # j, i+1 entry, super-diagonal
-    b = -c*(1 - Ai[:-1]/Ai[1:])  # j, i
+    a = Ups * (Ii[:-1] / Ii[1:]) - Lam * Ai[:-1] * dz**2 / (4 * Ii[1:]) # j, j-1 entry, sub-diagonal
+    b = -Ups * (1 + Ii[:-1] / Ii[1:]) - Lam * Ai[1:] * dz**2 / (4 * Ii[1:]) * (1 + Ai[:-1]/Ai[1:])  # j, j entry, main diagonal
     #add fillers to b to make it length N
     b = np.insert(b, 0, 0)
+    c = Ups * np.ones(N-1) - Lam * Ai[1:] * dz**2 / (4 * Ii[1:])  # j, j+1 entry, super-diagonal
 
     H4 = diags(
         diagonals=[a, b, c],
@@ -106,10 +113,10 @@ def create_internal_matrices(N, Ai, Ii, dz, S, Y, rho):
         format="csr"
     )
 
-    # Combine H matrices into a single system matrix. H1 is top-left, H2 is top-right, H3 is bottom-right, H4 is bottom-left
+    # Combine H matrices into a single system matrix. H1 is top-left, H2 is top-right, H3 is bottom-left, H4 is bottom-right
     # System matrix H
     H_top = np.hstack((H1.toarray(), H2.toarray()))
-    H_bottom = np.hstack((H4.toarray(), H3.toarray()))
+    H_bottom = np.hstack((H3.toarray(), H4.toarray()))
     H = np.vstack((H_top, H_bottom))
 
     return H
