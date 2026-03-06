@@ -89,8 +89,10 @@ def create_internal_matrices(N, Ai, Ii, dz, S, Y, rho):
     a = Lam * Ai[:-1] * dz**2 / (2 * Ii[1:])  # j, i-1 entry, sub-diagonal
     c = -Lam * Ai[1:] * dz**2 / (2 * Ii[1:])  # j, i+1 entry, super-diagonal
     b = -c*(1 - Ai[:-1]/Ai[1:])  # j, i
-    #add fillers to b to make it length N
+    #add fillers to diags for boundary conditions, the first row of H3 should be empty since it corresponds to the first slice which has no i-1 entry, and the last row of H3 should be empty since it corresponds to the last slice which has no i+1 entry
     b = np.insert(b, 0, 0)
+    c = np.insert(c, 0, 0)
+
 
     H3 = diags(
         diagonals=[a, b, c],
@@ -98,13 +100,18 @@ def create_internal_matrices(N, Ai, Ii, dz, S, Y, rho):
         shape=(N, N),
         format="csr"
     )
+    #assert that the first row of H3 is empty 
+    assert np.all(H3[0, :].toarray() == 0), "First row of H3 should be empty"
+
     
     # H4 matrix
     a = Ups * (Ii[:-1] / Ii[1:]) - Lam * Ai[:-1] * dz**2 / (4 * Ii[1:]) # j, j-1 entry, sub-diagonal
     b = -Ups * (1 + Ii[:-1] / Ii[1:]) - Lam * Ai[1:] * dz**2 / (4 * Ii[1:]) * (1 + Ai[:-1]/Ai[1:])  # j, j entry, main diagonal
-    #add fillers to b to make it length N
-    b = np.insert(b, 0, 0)
     c = Ups * np.ones(N-1) - Lam * Ai[1:] * dz**2 / (4 * Ii[1:])  # j, j+1 entry, super-diagonal
+
+    #add fillers to diags for boundary conditions, the first row of H4 should be empty since it corresponds to the first slice which has no j-1 entry
+    b = np.insert(b, 0, 0)
+    c = np.insert(c, 0, 0)
 
     H4 = diags(
         diagonals=[a, b, c],
@@ -112,6 +119,8 @@ def create_internal_matrices(N, Ai, Ii, dz, S, Y, rho):
         shape=(N, N),
         format="csr"
     )
+
+    assert np.all(H4[0, :].toarray() == 0), "First row of H4 should be empty"
 
     # Combine H matrices into a single system matrix. H1 is top-left, H2 is top-right, H3 is bottom-left, H4 is bottom-right
     # System matrix H
@@ -178,6 +187,11 @@ def create_system_matrices(N, Ai, Ii, dz, S, Y, rho):
     :return: system matrix H (2N x 2N)
     """
     H = create_internal_matrices(N, Ai, Ii, dz, S, Y, rho)
+    # Clear boundary rows so edit_boundary writes to a clean slate
+    H[0, :] = 0
+    H[N-1, :] = 0
+    H[N, :] = 0
+    H[2*N-1, :] = 0
     H = edit_boundary(H, Ai, Ii, dz, S, Y, rho)
 
     #save H matrix
