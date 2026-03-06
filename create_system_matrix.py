@@ -47,7 +47,7 @@ def create_internal_matrices(N, Ai, Ii, dz, S, Y, rho):
     H4 = np.zeros((N, N)) # system matrix
     #helper constants
     Lam = S / (rho * dz**2)
-    Gam = Y / (rho * dz**2)
+    Ups = Y / (rho * dz**2)
 
     # Helpful note: A[:-1] is analogous to A_{i - 1} and A[1:] is analogous to A_{i}
     # H1 matrix
@@ -65,7 +65,7 @@ def create_internal_matrices(N, Ai, Ii, dz, S, Y, rho):
     )
 
     # H2 matrix
-    a = -Lam * Ai[:-1] / (2*Ai[:-1])  # sub-diagonal
+    a = -Lam * Ai[:-1] / (2 * Ai[1:])  # sub-diagonal
     b = Lam / 2 * (1 - Ai[:-1]/Ai[1:])  # main diagonal
     #add fillers to b to make it length N
     b = np.insert(b, 0, 0)
@@ -79,11 +79,11 @@ def create_internal_matrices(N, Ai, Ii, dz, S, Y, rho):
     )
 
     # H3 matrix
-    a = Gam * (Ii[:-1] / Ii[1:]) - Lam * Ai[1:] * dz**2 / (4 * Ii[1:]) # sub-diagonal
-    b = -Gam * (1 + Ii[:-1] / Ii[1:]) - Lam * Ai[1:] * dz**2 / (4 * Ii[1:]) * (1 + Ai[:-1]/Ai[1:])  # main diagonal
+    a = Ups * (Ii[:-1] / Ii[1:]) - Lam * Ai[:-1] * dz**2 / (4 * Ii[1:]) # sub-diagonal
+    b = -Ups * (1 + Ii[:-1] / Ii[1:]) - Lam * Ai[1:] * dz**2 / (4 * Ii[1:]) * (1 + Ai[:-1]/Ai[1:])  # main diagonal
     #add fillers to b to make it length N
     b = np.insert(b, 0, 0)
-    c = Gam * np.ones(N-1) - Lam * Ai[1:] * dz**2 / (4 * Ii[1:])  # super-diagonal
+    c = Ups * np.ones(N-1) - Lam * Ai[1:] * dz**2 / (4 * Ii[1:])  # super-diagonal
 
     H3 = diags(
         diagonals=[a, b, c],
@@ -93,9 +93,9 @@ def create_internal_matrices(N, Ai, Ii, dz, S, Y, rho):
     )
 
     # H4 matrix
-    a = Lam * Ai[:-1] * dz**2 / (2 * Ii[1:])  # sub-diagonal
-    c = -Lam * Ai[1:] * dz**2 / (2 * Ii[1:])  # super-diagonal
-    b = -c*(1 - Ai[:-1]/Ai[1:])  # main diagonal
+    a = Lam * Ai[:-1] * dz**2 / (2 * Ii[1:])  # j, i-1 entry, sub-diagonal
+    c = -Lam * Ai[1:] * dz**2 / (2 * Ii[1:])  # j, i+1 entry, super-diagonal
+    b = -c*(1 - Ai[:-1]/Ai[1:])  # j, i
     #add fillers to b to make it length N
     b = np.insert(b, 0, 0)
 
@@ -128,7 +128,7 @@ def edit_boundary(H, Ai, Ii, dz, S, Y, rho):
     N = Ai.shape[0]
     #helper constants
     Lam = S / (rho * dz**2)
-    Gam = Y / (rho * dz**2)
+    Ups = Y / (rho * dz**2)
 
     #First Row
     H[0, 0] = -Lam
@@ -145,18 +145,18 @@ def edit_boundary(H, Ai, Ii, dz, S, Y, rho):
     #N+1 Row
     # H[N, 0] = Lam * Ai[-1]*dz**2 / (4 * Ii[-1])
     # H[N, 1] = -H[N, 0]
-    # H[N, N] =  Gam - H[N, 0] 
-    # H[N, N +1] = -Gam - H[N, 0]
-    H[N, 0] = Lam * Ai[-1] * dz**2 / (4*Ii[-1])
-    H[N, 1] = -Lam * Ai[-1] * dz**2 / (4*Ii[-1])
-    H[N, N] = Gam - Lam * Ai[-1] * dz**2 / (4*Ii[-1])
-    H[N, N+1] = -Gam - Lam * Ai[-1] * dz**2 / (4*Ii[-1])
+    # H[N, N] =  Ups - H[N, 0] 
+    # H[N, N +1] = -Ups - H[N, 0]
+    H[N, 0] = Lam * Ai[0] * dz**2 / (2*Ii[0])
+    H[N, 1] = -Lam * Ai[0] * dz**2 / (2*Ii[0])
+    H[N, N] = -Ups - Lam * Ai[-1] * dz**2 / (4*Ii[-1])
+    H[N, N+1] = Ups - Lam * Ai[-1] * dz**2 / (4*Ii[-1])
  
     #2N Row
     H[2*N -1, N -2] = Lam * Ai[-2]*dz**2 / (2 * Ii[-1])
     H[2*N -1, N -1] = -H[2*N -1, N -2]
-    H[2*N -1, 2*N -2] = Gam* Ii[-2]/ Ii[-1] - H[2*N -1, N -2]
-    H[2*N -1, 2*N -1] = -Gam* Ii[-2]/ Ii[-1] - H[2*N -1, N -2]
+    H[2*N -1, 2*N -2] = Ups * Ii[-2] / Ii[-1] - H[2*N -1, N -2] / 2
+    H[2*N -1, 2*N -1] = -Ups * Ii[-2] / Ii[-1] - H[2*N -1, N -2] / 2
     return H
 
 def create_system_matrices(N, Ai, Ii, dz, S, Y, rho):
@@ -186,7 +186,7 @@ if __name__ == "__main__":
     mass = 0.885 # in kg
     rho = 649 # in kg/m^3
     z_CM = 0.564 # in m
-    r_gam = 0.23 # in m
+    r_Ups = 0.23 # in m
     Y = 1.814 # in N/m^2
     Y = Y * 1e10  # convert to N/m^2
     S = 1.05 # in N/ m^2
