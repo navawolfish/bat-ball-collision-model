@@ -4,3 +4,28 @@ midterm_report/*
 # But keep plots/ and the PDF
 !midterm_report/plots/
 !midterm_report/sample7.pdf
+
+# Ignore docs
+docs/*
+
+# Ignore old py files
+*old*.py
+
+# Ignore large data files
+data/*.mp4
+data/*.avi
+data/*.mov
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Ignore macOS files
+.DS_Store
+
+# Ignore virtual environment
+sabrenv/
