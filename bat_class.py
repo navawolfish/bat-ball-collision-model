@@ -30,7 +30,7 @@ colors = plt.get_cmap('tab10').colors
 #turn colors into a list
 colors = [colors[i] for i in range(len(colors))]
 colors = ['#EFA00B', '#439775', '#4B4E6D', '#6A4C93', '#FAC8CD', '#9BC1BC', '#5D737E', '#D9BF77', '#ACD8AA', '#FFE156']
-#%% Helpers
+#%% ODE system for bat vibration using system matrix H
 def new_bat_ode(t, x, H, N, pbar):
     """
     ODE system for bat vibration using system matrix H
@@ -86,6 +86,22 @@ def bat_ode_with_force(t, x, H, N, F, pbar = None):
 
     # Return derivative: d/dt [y, Phi, y_dot, Phi_dot] = [y_dot, Phi_dot, y_ddot, Phi_ddot]
     return np.concatenate([y_dot, Phi_dot, y_ddot, Phi_ddot])
+
+
+
+#%% ball force profile for collision
+
+def F_quad(u, k, alpha):
+    """ 
+    Quadratic force profile for collision. Modelling the ball as a lossy spring with stiffness k and deformation u, with a nonlinearity alpha to capture the fact that the ball gets stiffer as it deforms more.
+    """
+    return k * u**alpha
+
+
+
+
+
+# BatOsc class to store bat profile, initial conditions, and features, and to perform integration and plotting
 
 class BatOsc:
     def __init__(self, bat_prof, dz):
@@ -318,3 +334,11 @@ class BatOsc:
             ani.save(path, writer='ffmpeg', dpi=150)
         plt.show()
 # %%
+
+class Ball: 
+    def __init__(self, v, k1, alpha, mass, radius):
+        self.mass = mass
+        self.radius = radius
+        self.initial_velocity = v
+        self.k1 = k1
+        self.alpha = alpha

@@ -1,6 +1,0 @@
-# Ignore everything in midterm_report
-midterm_report/*
-
-# But keep plots/ and the PDF
-!midterm_report/plots/
-!midterm_report/sample7.pdf

@@ -27,6 +27,20 @@ def load_H_matrix(file_path, N = 84):
             H = np.zeros((2*N, 2*N))
         H[i, j] = value
     return H
+def matrix_to_sparse_csv(H, path):
+    """ Converts a full matrix H to sparse format and saves as CSV with columns [i, j, H(i, j)] for non-zero entries.
+    :param H: full matrix (2N x 2N)
+    :param path: path to save the CSV file
+    """
+    # Extract non-zero entries for display
+    H_nonzero = pd.DataFrame(H).stack().reset_index()
+    H_nonzero['level_0'] = H_nonzero['level_0'] + 1
+    H_nonzero['level_1'] = H_nonzero['level_1'] + 1
+
+    H_nonzero.columns = ['i', 'j', 'H(i, j)']
+    H_nonzero = H_nonzero[abs(H_nonzero['H(i, j)']) > 1e-10].reset_index(drop=True)
+    H_nonzero.to_csv(path, index=False)
+    return 
 
 def create_internal_matrices(N, Ai, Ii, dz, S, Y, rho):
     """
@@ -165,8 +179,8 @@ def edit_boundary(H, Ai, Ii, dz, S, Y, rho):
     # H[N, N +1] = -Ups - H[N, 0]
     H[N, 0] = Lam * Ai[0] * dz**2 / (2*Ii[0])
     H[N, 1] = -Lam * Ai[0] * dz**2 / (2*Ii[0])
-    H[N, N] = -Ups - Lam * Ai[-1] * dz**2 / (4*Ii[-1])
-    H[N, N+1] = Ups - Lam * Ai[-1] * dz**2 / (4*Ii[-1])
+    H[N, N] = -Ups - Lam * Ai[0] * dz**2 / (4*Ii[0])
+    H[N, N+1] = Ups - Lam * Ai[0] * dz**2 / (4*Ii[0])
  
     #2N Row
     H[2*N -1, N -2] = Lam * Ai[-2]*dz**2 / (2 * Ii[-1])
@@ -175,7 +189,7 @@ def edit_boundary(H, Ai, Ii, dz, S, Y, rho):
     H[2*N -1, 2*N -1] = -Ups * Ii[-2] / Ii[-1] - H[2*N -1, N -2] / 2
     return H
 
-def create_system_matrices(N, Ai, Ii, dz, S, Y, rho):
+def create_system_matrices(N, Ai, Ii, dz, S, Y, rho, path = ''):
     """ Creates the system matrix H with boundary conditions applied
     :param N: number of slices
     :param Ai: cross-sectional area array, N-length
@@ -195,9 +209,109 @@ def create_system_matrices(N, Ai, Ii, dz, S, Y, rho):
     H = edit_boundary(H, Ai, Ii, dz, S, Y, rho)
 
     #save H matrix
-    np.savetxt('data/H_matrix.csv', H, delimiter=',')
+    if path != '':
+        matrix_to_sparse_csv(H, path)
     return H
 
+
+#### EIGENMODES AND EIGENFREQUENCIES
+def compute_eigenfrequencies(H, num_modes=10):
+    """Compute eigenvalues, eigenvectors, and frequencies from system matrix H.
+    
+    :param H: system matrix (2N x 2N)
+    :param num_modes: number of modes to return (sorted by eigenvalue descending)
+    :return: DataFrame with columns ['eigenvalue', 'frequency_Hz', 'eigenvector'],
+             sorted by eigenvalue descending
+    """
+    evals, evecs = np.linalg.eig(H)
+
+    eig_df = pd.DataFrame({
+        'eigenvalue': evals,
+        'frequency_Hz': np.where(evals.real < 0, np.sqrt(-evals.real) / (2 * np.pi), 0),
+        'eigenvector': list(evecs.T)
+    })
+
+    eig_df.sort_values('eigenvalue', ascending=False, inplace=True)
+    eig_df.reset_index(drop=True, inplace=True)
+    return eig_df
+
+
+def find_mode_nodes(eig_df, zs, N, num_modes=10):
+    """Find nodal positions (zero crossings) for each mode shape.
+    
+    :param eig_df: DataFrame from compute_eigenfrequencies
+    :param zs: array of z positions along the bat (length N)
+    :param N: number of spatial slices
+    :param num_modes: number of modes to analyze
+    :return: list of arrays, each containing node indices for the corresponding mode
+    """
+    nodes = []
+    for mode_idx in range(num_modes):
+        row = eig_df.iloc[mode_idx]
+        y = row['eigenvector'].real[:N]
+        sign_changes = np.where(np.diff(np.sign(y)))[0]
+        roots = []
+        for sc in sign_changes:
+            x0, x1 = zs[sc], zs[sc + 1]
+            y0, y1 = y[sc], y[sc + 1]
+            root = x0 - y0 * (x1 - x0) / (y1 - y0)
+            roots.append(int(np.round(root * 1e2, 0)) - 1)
+        nodes.append(np.array(roots, dtype=int))
+    return nodes
+
+def plot_mode_shapes(eig_df, zs, N, num_modes=10, nodes=None, colors=None):
+    """Plot eigenvector mode shapes with optional nodal markers.
+    
+    :param eig_df: DataFrame from compute_eigenfrequencies
+    :param zs: array of z positions along the bat (length N)
+    :param N: number of spatial slices
+    :param num_modes: number of modes to plot
+    :param nodes: list of node-index arrays (from find_mode_nodes); computed if None
+    :param colors: list of color strings (needs at least num_modes)
+    :return: fig, axs
+    """
+    if colors is None:
+        colors = ['#EFA00B', '#439775', '#4B4E6D', '#6A4C93', '#FAC8CD',
+                  '#9BC1BC', '#5D737E', '#D9BF77', '#ACD8AA', '#FFE156']
+    if nodes is None:
+        nodes = find_mode_nodes(eig_df, zs, N, num_modes)
+
+    ls = ['-', ':', '-.', '--', '--'] * 2
+    fig, axs = plt.subplots(num_modes, 1, sharex=True, figsize=(16, 2*num_modes))
+    if num_modes == 1:
+        axs = [axs]
+
+    for i in range(num_modes):
+        row = eig_df.iloc[i]
+        evec = row['eigenvector'].real
+        evec_first = evec[:N]
+
+        axs[i].plot(zs, evec_first, label=f'Mode {i}',
+                    color=colors[i % len(colors)], linestyle=ls[i % len(ls)])
+
+        if len(nodes[i]) > 0:
+            valid = nodes[i][(nodes[i] >= 0) & (nodes[i] < N)]
+            axs[i].scatter(zs[valid], evec_first[valid], s=50, marker='x',
+                           color='r', zorder=20, label='Nodes')
+            for node in valid:
+                axs[i].text(zs[node], evec_first[node], f'Node {node + 1}',
+                            color='r', fontsize=10, ha='right', va='bottom',
+                            bbox=dict(facecolor='white', edgecolor='none', pad=2))
+
+        axs[i].legend(loc='lower right')
+        if i < 2:
+            axs[i].set_title(f'Translational Mode {i + 1} (f = 0 Hz)',
+                             fontweight='bold', fontsize=12)
+        else:
+            axs[i].set_title(
+                f'Mode {i - 1} - Positional Half (f = {row["frequency_Hz"]:.2f} Hz)',
+                fontweight='bold', fontsize=12)
+
+    axs[-1].set_xlabel('Position Along Bat (m)')
+    axs[num_modes // 2].set_ylabel('Vibrational Amplitude')
+    fig.suptitle('Mode Shapes of the Bat', fontweight='bold', fontsize=16)
+    plt.tight_layout()
+    return fig, axs
 
 # %%
 if __name__ == "__main__":
@@ -225,7 +339,7 @@ if __name__ == "__main__":
 
 
     # Create system matrix
-    H = create_system_matrices(N, Ai, Ii, dz, S, Y, rho)
+    H = create_system_matrices(N, Ai, Ii, dz, S, Y, rho, path='data/H_matrix.csv')
 
     # Extract non-zero entries for display
     H_nonzero = pd.DataFrame(H).stack().reset_index()
