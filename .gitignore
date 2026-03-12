@@ -29,3 +29,7 @@ __pycache__/
 
 # Ignore virtual environment
 sabrenv/
+
+#ignore substack files
+substack.ipynb
+substack_plots*
