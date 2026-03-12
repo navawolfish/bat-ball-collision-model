@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import pandas as pd 
 from create_system_matrix import create_system_matrices, load_H_matrix
 from scipy.integrate import solve_ivp
-from plot_osc import rotate, make_box
 import matplotlib.animation as animation
+from scipy.interpolate import interp1d
 #%% PLOT SETTINGS
 plt.rcParams.update({
     'figure.figsize': (10, 6),
@@ -88,7 +88,73 @@ def bat_ode_with_force(t, x, H, N, F, pbar = None):
     return np.concatenate([y_dot, Phi_dot, y_ddot, Phi_ddot])
 
 
+def bat_ode_with_ball(t, x, H, N, M_inv_diag, impact_idx, ball, phase, pbar=None):
+    """
+    ODE system for bat vibration coupled with ball collision.
+    State vector: x = [y, Phi, y_dot, Phi_dot, yb, yb_dot]
+    :param t: time
+    :param x: state vector (4N + 2)
+    :param H: system matrix (2N x 2N)
+    :param N: number of slices
+    :param impact_idx: index of the impact location on the bat
+    :param ball: Ball object
+    :param phase: 'compress' or 'expand' — determines which force law to use
+    :param pbar: progress bar object (optional)
+    """
+    if pbar is not None:
+        pbar.update(1)
 
+    # Unpack state vector
+    y = x[0:N]
+    Phi = x[N:2*N]
+    y_dot = x[2*N:3*N]
+    Phi_dot = x[3*N:4*N]
+    yb = x[4*N]
+    yb_dot = x[4*N + 1]
+
+    # Ball compression: positive when ball is compressed against bat
+    u = ball.radius - (yb - y[impact_idx])
+
+    # Compute contact force
+    if u > 0:
+        if phase == 'compress':
+            Fk = ball.compress(u)
+        else:  # phase == 'expand'
+            Fk = ball.expand(u, ball.k2)
+    else:
+        Fk = 0.0
+
+    # Bat accelerations
+    psi = np.concatenate([y, Phi])
+    F = np.zeros(2 * N)
+    F[impact_idx] = -Fk  # raw force; M_inv converts to acceleration
+    psi_ddot = H.dot(psi) + M_inv_diag * F
+    y_ddot = psi_ddot[0:N]
+    Phi_ddot = psi_ddot[N:2*N]
+
+    # Ball acceleration (Newton's 3rd law: force decelerates ball, pushes it back up)
+    yb_ddot = Fk / ball.mass
+
+    return np.concatenate([y_dot, Phi_dot, y_ddot, Phi_ddot, [yb_dot], [yb_ddot]])
+
+
+def _event_ball_vel_zero(t, x, H, N, M_inv_diag, impact_idx, ball, phase, pbar=None):
+    """Event function: triggers when ball velocity crosses zero (max compression)."""
+    return x[4*N + 1]  # yb_dot = 0
+
+_event_ball_vel_zero.terminal = True
+_event_ball_vel_zero.direction = 1  # detect negative -> positive crossing (ball starts reversing)
+
+
+def _event_separation(t, x, H, N, M_inv_diag, impact_idx, ball, phase, pbar=None):
+    """Event function: triggers when ball separates from bat (u <= 0)."""
+    yb = x[4*N]
+    y_impact = x[impact_idx]
+    u = ball.radius - (yb - y_impact)
+    return u  # crosses zero when ball separates
+
+_event_separation.terminal = True
+_event_separation.direction = -1  # detect positive -> negative crossing
 #%% ball force profile for collision
 
 def F_quad(u, k, alpha):
@@ -115,23 +181,12 @@ class BatOsc:
         self.N = bat_prof.shape[0]
         self.zs = bat_prof[:, 0] * 1e-2  # convert cm to m
         self.radii = bat_prof[:, 1] * 1e-3 / 2  # convert diameter to radius in m
-
-    def get_box(self, idx, y_shift=0.0, phi=0.0):
+    def set_ball(self, ball):
         """
-        Returns the box coordinates for slice idx, shifted by y_shift and rotated by phi.
-        :param idx: index of slice
-        :param y_shift: vertical shift
-        :param phi: rotation angle (radians, from vertical)
-        :return: Nx2 array of box corner points
+        Sets the ball parameters for collision modelling.
+        :param ball: Ball object containing mass, radius, and force profile parameters
         """
-        z = self.zs[idx]
-        H = self.radii[idx] * 2
-        box = make_box(z, H, dz=self.dz)
-        # Apply vertical shift to box coordinates
-        box = box.copy()
-        box[:, 1] += y_shift
-        centre = (z + self.dz / 2, y_shift)
-        return rotate(box, phi, centre=centre)
+        self.ball = ball
     
     def set_initial_conditions(self, state_vec):
         """
@@ -156,6 +211,12 @@ class BatOsc:
         self.rho = rho
         self.Y = Y
         self.S = S
+        #also set M matrix
+        Ai = np.pi * (self.radii)**2
+        Ii = (np.pi / 4) * (self.radii)**4
+        self.M = np.diag(np.concatenate([Ai*rho * self.dz, Ii * rho / self.dz]))
+        self.M_inv_diag = 1.0 / np.diag(self.M)  # precompute for ODE speed
+
     
     def get_H_matrix(self, H_matrix=None):
         """
@@ -176,7 +237,30 @@ class BatOsc:
                                    rho = self.rho)
         return
 
+    def validate(self, require_inits=True, require_ball=False, impact_idx=None):
+        """
+        Checks that the bat is fully set up before integration. Raises a descriptive
+        ValueError listing every missing step.
+        :param require_inits: whether initial conditions must be set
+        :param require_ball: whether a ball must be attached
+        :param impact_idx: if provided, checks the index is within bounds
+        """
+        errors = []
+        if not hasattr(self, 'mass'):
+            errors.append("Material features not set — call set_bat_features(mass, rho, Y, S).")
+        if not hasattr(self, 'H'):
+            errors.append("System matrix H not built — call get_H_matrix().")
+        if require_inits and not hasattr(self, 'inits'):
+            errors.append("Initial conditions not set — call set_initial_conditions(state_vec).")
+        if require_ball and not hasattr(self, 'ball'):
+            errors.append("No ball attached — call set_ball(ball) or pass ball to integrate_with_ball().")
+        if impact_idx is not None and not (0 <= impact_idx < self.N):
+            errors.append(f"impact_idx={impact_idx} is out of bounds for bat with N={self.N} slices.")
+        if errors:
+            msg = "BatOsc setup incomplete:\n" + "\n".join(f"  • {e}" for e in errors)
+            raise ValueError(msg)
 
+#%% Integration functions
     def integrate_solution(self, t_span, t_eval = None):
         """ 
         Integrates the bat oscillation ODE without external forces.
@@ -236,109 +320,218 @@ class BatOsc:
         self.t = sol.t
         return sol
 
-
-    def plot_bat(self, time_idx = 0, exaggerate=1.0, exaggerate_rotation=1.0, new_fig = True, highlight=-1):
+    def integrate_with_ball(self, t_span, ball, impact_idx, t_eval=None, verbose = False):
         """
-        Plots the bat at a specific time index.
-        :param time_idx: time index to plot
+        Integrates bat + ball collision in two phases:
+          Phase 1 (compression): runs until yb_dot = 0 (max compression)
+          Phase 2 (expansion): computes k2 from max compression state, runs until separation (u <= 0)
+        Then continues free vibration for the remainder of t_span.
+
+        State vector: [y, Phi, y_dot, Phi_dot, yb, yb_dot]  (length 4N + 2)
+
+        :param t_span: tuple (t0, tf)
+        :param ball: Ball object with compress/expand/get_k2 methods
+        :param impact_idx: index of impact slice
+        :param t_eval: optional array of output time points
+        :return: dict with keys 't', 'y_sol', 'phi_sol', 'yb', 'yb_dot',
+                 'max_u', 'max_F', 'k2', 't_max_compress', 't_separation'
         """
-        if new_fig:
-            fig, ax = plt.subplots(figsize=(10, 6))
-            ax.set_aspect('equal')
-            ax.set_ylabel('Vertical Position (m)')
-            ax.set_xlabel('Longitudinal Position (m)')  
-            ax.set_ylim(max(self.radii)*5 * -1, max(self.radii)*5)
+        assert hasattr(self, 'H'), "H matrix not set. Call get_H_matrix() first"
+        assert hasattr(self, 'inits'), "Initial conditions not set. Call set_initial_conditions() first."
 
-        if not hasattr(self, 'y_sol') or not hasattr(self, 'phi_sol'):
-            print('No solution found, plotting static bat.')
-            #just plot static bat
-            for i in range(self.N):
-                box = self.get_box(i)
-                ax.plot(box[:, 0], box[:, 1], color = colors[0], alpha = 0.5)
-            if highlight >= 0:
-                box = self.get_box(highlight)
-                ax.plot(box[:, 0], box[:, 1], color = colors[2], alpha = 1.0, linewidth=2)
-            ax.set_title('Static Bat Profile')
-            if new_fig:
-                plt.show()
-            return
+        N = self.N
 
-        else:
-            top_left = [] #track top left corner of each box
-            for i in range(self.N):
-                box = self.get_box(i, y_shift= exaggerate * self.y_sol[i, time_idx], phi=exaggerate_rotation * self.phi_sol[i, time_idx])
-                top_left.append((box[0, 0], box[0, 1])) 
-                ax.plot(box[:, 0], box[:, 1], color = colors[1], alpha=0.3)
-                #scatter centre point
-                ax.scatter(self.bat_prof[i, 0]*1e-2 - self.dz/2, exaggerate * self.y_sol[i, time_idx], color='r', s=5)
-            ax.set_title(f'Bat Profile at Time Index {time_idx}')
-            if new_fig:
-                plt.show()
-            return 
-    def animate_bat(self, exaggerate=1.0, exaggerate_rotation=1.0, interval=10, path=None, idx=-1):
-        """
-        Animates the bat profile over time using plot_bat at intervals of 'interval' time indices.
-        :param exaggerate: exaggeration factor for displacement
-        :param interval: number of time indices between frames
-        """
+        # Store per-slice masses on ball so the ODE can divide force by slice mass
+        Ai = np.pi * self.radii**2
+        ball.slice_masses = self.rho * Ai * self.dz
 
-        if not hasattr(self, 'y_sol') or not hasattr(self, 'phi_sol'):
-            print('No solution found, cannot animate bat.')
-            return
-        if interval < 1:
-            raise ValueError("interval must be >= 1")
+        # Build initial state: append ball position and velocity to bat state
+        bat_state = self.inits.flatten()  # length 4N
+        y_impact_0 = bat_state[impact_idx]
+        x0 = np.concatenate([bat_state, [ball.radius + y_impact_0, -ball.initial_velocity]])
+        # yb(0) = R_ball + y_impact(0), so u = R_ball - (yb - y_impact) = 0 (just touching)
+        # yb_dot(0) = -v (moving toward bat, negative direction)
 
-        frame_indices = np.arange(0, self.y_sol.shape[1], interval)
-        num_frames = len(frame_indices)
+        ode_args = (self.H, N, self.M_inv_diag, impact_idx, ball, 'compress')
 
-        base_ylim = max(self.radii) * 1.2
-        max_disp = np.max(np.abs(exaggerate * self.y_sol))
-        y_lim = max(base_ylim, max_disp + base_ylim)
+        # --- Phase 1: compression (until yb_dot crosses zero) ---
+        sol1 = solve_ivp(
+            bat_ode_with_ball, (t_span[0], t_span[1]), x0,
+            args=ode_args, method='RK45',
+            events=[_event_ball_vel_zero],
+            rtol=1e-8, atol=1e-10, dense_output=True, max_step=1e-5
+        )
 
-        fig, ax = plt.subplots(figsize=(10, 6))
-        ax.set_aspect('equal')
-        if exaggerate != 1.0:
-            ax.set_ylabel(f'{exaggerate}x Vertical Position (m)')
-        else:
-            ax.set_ylabel('Vertical Position (m)')
-        ax.set_xlabel('Longitudinal Position (m)')
-        ax.set_ylim(-y_lim, y_lim)
-        ax.set_xlim(min(self.zs)-self.dz, max(self.zs)+3*self.dz)
+        # Collect phase 1 results
+        all_t = [sol1.t]
+        all_y = [sol1.y]
 
-        def update(frame):
-            t_idx = frame_indices[frame]
-            ax.clear()
-            ax.set_aspect('equal')
-            if exaggerate != 1.0:
-                ax.set_ylabel(f'{exaggerate}x Vertical Position (m)')
+        if sol1.t_events[0].size > 0:
+            t_max_compress = sol1.t_events[0][0]
+            x_at_max = sol1.y_events[0][0]
+
+            # Compute max deformation and force at max compression
+            yb_max = x_at_max[4*N]
+            y_impact_max = x_at_max[impact_idx]
+            max_u = ball.radius - (yb_max - y_impact_max)
+            max_F = ball.compress(max_u)
+            k2 = ball.get_k2(max_F, max_u)
+            ball.k2 = k2  # store for the expansion ODE
+            if verbose:
+                print(f"Max compression at t = {t_max_compress*1e3:.3f} ms: "
+                    f"u_max = {max_u*1e3:.3f} mm, F_max = {max_F:.1f} N, k2 = {k2:.2e}")
+
+            # --- Phase 2: expansion (until ball separates from bat) ---
+            ode_args_expand = (self.H, N, self.M_inv_diag, impact_idx, ball, 'expand')
+            sol2 = solve_ivp(
+                bat_ode_with_ball, (t_max_compress, t_span[1]), x_at_max,
+                args=ode_args_expand, method='RK45',
+                events=[_event_separation],
+                rtol=1e-8, atol=1e-10, dense_output=True, max_step=1e-5
+            )
+
+            # Skip first time point of sol2 (duplicate of transition)
+            all_t.append(sol2.t[1:])
+            all_y.append(sol2.y[:, 1:])
+
+            if sol2.t_events[0].size > 0:
+                t_separation = sol2.t_events[0][0]
+                x_at_sep = sol2.y_events[0][0]
+                if verbose:
+                    print(f"Ball separates at t = {t_separation*1e3:.3f} ms, "
+                          f"ball exit v = {x_at_sep[4*N+1]:.2f} m/s")
+
+                # --- Phase 3: free vibration (no ball) ---
+                if t_separation < t_span[1]:
+                    bat_state_free = x_at_sep[:4*N]
+                    sol3 = solve_ivp(
+                        lambda t, x: new_bat_ode(t, x, self.H, N, None),
+                        (t_separation, t_span[1]), bat_state_free,
+                        method='RK45', rtol=1e-8, atol=1e-10, max_step=1e-5
+                    )
+                    # Pad ball DOFs: ball flies out with constant velocity post-separation
+                    dt_post = sol3.t[1:] - t_separation
+                    yb_final = x_at_sep[4*N] + x_at_sep[4*N+1] * dt_post
+                    yb_dot_final = x_at_sep[4*N+1] * np.ones(sol3.t[1:].shape)
+                    sol3_padded = np.vstack([
+                        sol3.y[:, 1:],
+                        yb_final[np.newaxis, :],
+                        yb_dot_final[np.newaxis, :]
+                    ])
+                    all_t.append(sol3.t[1:])
+                    all_y.append(sol3_padded)
             else:
-                ax.set_ylabel('Vertical Position (m)')
-            ax.set_xlabel('Longitudinal Position (m)')
-            ax.set_ylim(-y_lim, y_lim)
-            ax.set_xlim(min(self.zs)-self.dz, max(self.zs)+3*self.dz)
-            for i in range(self.N):
-                y_val = exaggerate * self.y_sol[i, t_idx]
-                phi_val = exaggerate_rotation * self.phi_sol[i, t_idx]
-                box = self.get_box(i, y_shift=y_val, phi=phi_val)
-                ax.plot(box[:, 0], box[:, 1], color=colors[1], alpha=0.3)
-                if i == idx:
-                    ax.plot(box[:, 0], box[:, 1], color=colors[2], alpha=1.0, linewidth=2, label = f'Impact Location')
-                    ax.legend(loc = 'lower left')
+                t_separation = None
+                if verbose:
+                    print("Warning: ball did not separate before t_final")
+        else:
+            t_max_compress = None
+            max_u = max_F = k2 = None
+            t_separation = None
+            if verbose:
+                print("Warning: ball velocity never crossed zero (no max compression detected)")
 
-                ax.scatter((self.bat_prof[i, 0] - 1)*1e-2 + self.dz/2, y_val, color='r', s=5)
-            ax.set_title(f'Bat Profile at Time {self.t[t_idx]*1000:.2f} ms') #update to actually be value of t in ms
+        # Concatenate all phases
+        t_full = np.concatenate(all_t)
+        y_full = np.concatenate(all_y, axis=1)
 
-        ani = animation.FuncAnimation(fig, update, frames=num_frames, interval=50, repeat=False)
-        # Save the animation as an mp4 file
-        if path is not None:
-            ani.save(path, writer='ffmpeg', dpi=150)
-        plt.show()
-# %%
+        # If t_eval requested, interpolate
+        if t_eval is not None:
+            interp = interp1d(t_full, y_full, kind='linear', axis=1, fill_value='extrapolate')
+            y_full = interp(t_eval)
+            t_full = t_eval
 
+        # Store results
+        self.y_sol = y_full[0:N, :]
+        self.phi_sol = y_full[N:2*N, :]
+        self.t = t_full
+        
+        #now store ball results as well
+        if not hasattr(self, 'ball'):
+            self.ball = ball
+        self.ball.yb = y_full[4*N, :]
+        self.ball.yb_dot = y_full[4*N+1, :]
+        self.ball.u = ball.radius - (self.ball.yb - self.y_sol[impact_idx, :])  # deformation over time
+        # ensure u does not go negative
+        self.ball.u[self.ball.u < 0] = 0 # ball cannot pull on the bat, only compress
+        self.ball.k2 = k2 # store k2 in ball object for reference
+        self.ball.exit_v = self.ball.yb_dot[-1] if t_separation is not None else None
+
+        return {
+            't': t_full,
+            'y_sol': y_full[0:N, :],
+            'phi_sol': y_full[N:2*N, :],
+            'yb': y_full[4*N, :],
+            'yb_dot': y_full[4*N+1, :],
+            'max_u': max_u,
+            'max_F': max_F,
+            'k2': k2,
+            't_max_compress': t_max_compress,
+            't_separation': t_separation,
+        }
+    def reset(self):
+        """Resets the solution attributes to allow for fresh integration."""
+        if hasattr(self, 'y_sol'):
+            del self.y_sol
+        if hasattr(self, 'phi_sol'):
+            del self.phi_sol
+        if hasattr(self, 't'):
+            del self.t
+        if hasattr(self, 'ball'):
+            if hasattr(self.ball, 'yb'):
+                del self.ball.yb
+            if hasattr(self.ball, 'yb_dot'):
+                del self.ball.yb_dot
+            if hasattr(self.ball, 'u'):
+                del self.ball.u
+            if hasattr(self.ball, 'k2'):
+                del self.ball.k2
+            if hasattr(self.ball, 'exit_v'):
+                del self.ball.exit_v
+        return
+
+# %% Ball class to store ball parameters and force profile for collision modelling
 class Ball: 
-    def __init__(self, v, k1, alpha, mass, radius):
+    def __init__(self, v, e0, k1, alpha, mass, radius):
         self.mass = mass
         self.radius = radius
-        self.initial_velocity = v
-        self.k1 = k1
-        self.alpha = alpha
+        self.initial_velocity = v #m/s, positive towards the bat
+        self.e0 = e0 #COR
+        self.k1 = k1 #stiffness of the ball, from 2000 paper, can be tuned to match observed collision times and forces
+        self.alpha = alpha # lossiness of the ball, higher alpha means more nonlinear stiffening as the ball deforms
+        self.beta = (1 + alpha) / e0**2 - 1 # from 2000 paper
+
+    def compress(self, u):
+        """ 
+        Force on the ball as a function of deformation u. Uses the quadratic force profile with parameters k1 and alpha.
+        """
+        F = F_quad(u, self.k1, self.alpha)
+        return F
+
+    def expand(self, u, k2):
+        """ 
+        Force on the ball as it expands back after maximum compression. Uses the same force profile but with a different stiffness k2 to capture the fact that the ball is stiffer during expansion than compression. Because the ball is lossy, the maximum force during expansion is higher than during compression, which is captured by the beta parameter.
+        """
+        F = F_quad(u, k2, self.beta) # example values for max_F and max_u, can be tuned
+        return F
+    
+    def get_k2(self, max_F, max_u):
+        """ 
+        Computes the effective stiffness k2 of the ball at maximum deformation, which occurs when the force equals the maximum force observed in collisions (max_F). This is used to ensure that the force profile matches observed collision forces.
+        """
+        k2 = max_F / max_u**self.beta
+        return k2 
+    def reset(self):
+        """Resets any dynamic attributes of the ball to allow for fresh simulation."""
+        if hasattr(self, 'yb'):
+            del self.yb
+        if hasattr(self, 'yb_dot'):
+            del self.yb_dot
+        if hasattr(self, 'u'):
+            del self.u
+        if hasattr(self, 'k2'):
+            del self.k2
+        if hasattr(self, 'exit_v'):
+            del self.exit_v
+        return
+    

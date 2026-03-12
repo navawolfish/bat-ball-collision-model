@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import os
 from create_system_matrix import create_system_matrices, load_H_matrix
-from scipy.integrate import solve_ivp
 #%%PLT
 #%% PLOT SETTINGS
 plt.rcParams.update({
@@ -84,81 +83,157 @@ def plot_bat_disp(zs, Ri, yi, phi_i, dz = 0.01, return_fig=False):
     ax.set_aspect('equal')
     ax.set_title('Bat Displacement along Length')
     plt.show()
-if __name__ == "__main__":
+
+def plot_batsol_heatmap(bat_sol):
+    """ 
+    Plot the heatmap of the bat solution (displacement and rotation) over time.
+    :param bat_sol: BatOsc object containing the solution of the bat oscillation
     """
-    This script is for visualising the oscillation of the bat. It creates a simple rectangular box representing the bat, rotates it by a small angle, and plots the original and rotated positions to illustrate the effect of the rotation on the height of the bat. It also creates a series of boxes along the z-axis with varying heights to simulate the oscillation of the bat over time, applying small random rotations to each box to show how the height changes with rotation. The final plot shows the oscillation pattern of the bat as it rotates.
+
+    #ensure bat_sol has the necessary attributes
+    if not hasattr(bat_sol, 'y_sol') or not hasattr(bat_sol, 'phi_sol'):
+        raise ValueError("bat_sol must have attributes 'y_sol' and 'phi_sol' for plotting.")
+    
+    fig, axs = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+    # y_sol subplot
+    im0 = axs[0].imshow(bat_sol.y_sol, cmap='hot', interpolation='nearest', aspect='auto')
+    axs[0].set_ylabel('Node')
+    axs[0].set_title('Displacement (y_sol)')
+    plt.colorbar(im0, ax=axs[0], label='Displacement')
+    # phi_sol subplot
+    im1 = axs[1].imshow(bat_sol.phi_sol, cmap='cool', interpolation='nearest', aspect='auto')
+    axs[1].set_xlabel('Time Index')
+    axs[1].set_ylabel('Node')
+    axs[1].set_title('Rotation (phi_sol)')
+    plt.colorbar(im1, ax=axs[1], label='Rotation')
+    # Set x-ticks to correspond to time points in standard_bat.t
+    num_ticks = 10
+    if hasattr(bat_sol, 't') and len(bat_sol.t) > 1:
+        xtick_locs = np.linspace(0, len(bat_sol.t)-1, num_ticks, dtype=int)
+        xtick_labels = [f"{bat_sol.t[i]:.4f}" for i in xtick_locs]
+        axs[1].set_xticks(xtick_locs)
+        axs[1].set_xticklabels(xtick_labels, rotation=45)
+    plt.tight_layout()
+    return fig, axs
+
+
+# %% BAT PLOTTING FUNCTIONS
+def get_box(bat_sol, idx, y_shift=0.0, phi=0.0):
+        """
+        Returns the box coordinates for slice idx, shifted by y_shift and rotated by phi.
+        :param idx: index of slice
+        :param y_shift: vertical shift
+        :param phi: rotation angle (radians, from vertical)
+        :return: Nx2 array of box corner points
+        """
+        z = bat_sol.zs[idx]
+        H = bat_sol.radii[idx] * 2
+        box = make_box(z, H, dz=bat_sol.dz)
+        # Apply vertical shift to box coordinates
+        box = box.copy()
+        box[:, 1] += y_shift
+        centre = (z + bat_sol.dz / 2, y_shift)
+        return rotate(box, phi, centre=centre)
+
+def plot_bat(bat_sol, time_idx = 0, exaggerate=1.0, exaggerate_rotation=1.0, new_fig = True, highlight=-1, title = ''):
     """
-    H = 6 # set sample height of the bat
-    L = 2 # set sample length of the bat
+    Plots the bat at a specific time index.
+    :param time_idx: time index to plot
+    """
+    if new_fig:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.set_aspect('equal')
+        ax.set_ylabel('Vertical Position (m)')
+        ax.set_xlabel('Longitudinal Position (m)')  
+        ax.set_ylim(max(bat_sol.radii)*5 * -1, max(bat_sol.radii)*5)
 
-    # define the corners of the rectangle representing the bat
-    line_top = np.array([[-L/2, H/2], [L/2, H/2]])
-    line_bottom = np.array([[-L/2, -H/2], [L/2, -H/2]])
-    line_right = np.array([[L/2, H/2], [L/2, -H/2]])
-    line_left = np.array([[-L/2, H/2], [-L/2, -H/2]])
+    if not hasattr(bat_sol, 'y_sol') or not hasattr(bat_sol, 'phi_sol'):
+        print('No solution found, plotting static bat.')
+        #just plot static bat
+        for i in range(bat_sol.N):
+            box = get_box(bat_sol, i)
+            ax.plot(box[:, 0], box[:, 1], color = colors[0], alpha = 0.5)
+        if highlight >= 0:
+            box = get_box(bat_sol, highlight)
+            ax.plot(box[:, 0], box[:, 1], color = colors[2], alpha = 1.0, linewidth=2)
+        if title == '':
+            ax.set_title('Static Bat Profile')
+        else:
+            ax.set_title(title)
+        if new_fig:
+            plt.show()
+        return
 
+    else:
+        top_left = [] #track top left corner of each box
+        for i in range(bat_sol.N):
+            box = get_box(bat_sol, i, y_shift= exaggerate * bat_sol.y_sol[i, time_idx], phi=exaggerate_rotation * bat_sol.phi_sol[i, time_idx])
+            top_left.append((box[0, 0], box[0, 1])) 
+            ax.plot(box[:, 0], box[:, 1], color = colors[1], alpha=0.3)
+            #scatter centre point
+            ax.scatter(bat_sol.bat_prof[i, 0]*1e-2 - bat_sol.dz/2, exaggerate * bat_sol.y_sol[i, time_idx], color='r', s=5)
+        ax.set_title(f'Bat Profile at Time Index {time_idx}')
+        if new_fig:
+            plt.show()
+        return
+def animate_bat(bat_sol, exaggerate=1.0, exaggerate_rotation=1.0, interval=10, path=None, idx=-1):
+        """
+        Animates the bat profile over time using plot_bat at intervals of 'interval' time indices.
+        :param exaggerate: exaggeration factor for displacement
+        :param interval: number of time indices between frames
+        """
 
-    # rotate the rectangle by 30 degrees (pi/6 radians)
-    rline_top = rotate(line_top, np.pi/6)
-    rline_bottom = rotate(line_bottom, np.pi/6)
-    rline_right = rotate(line_right, np.pi/6)
-    rline_left = rotate(line_left, np.pi/6)
+        if not hasattr(bat_sol, 'y_sol') or not hasattr(bat_sol, 'phi_sol'):
+            print('No solution found, cannot animate bat.')
+            return
+        if interval < 1:
+            raise ValueError("interval must be >= 1")
 
-    diag = np.array([[0, 0], [np.sin(np.pi/6)*H/2, np.cos(np.pi/6)*H/2]])
-    #plot lines
+        frame_indices = np.arange(0, bat_sol.y_sol.shape[1], interval)
+        num_frames = len(frame_indices)
 
-    fig, ax = plt.subplots(figsize=(8, 6))
-    ax.plot(line_top[:, 0], line_top[:, 1], 'b-')
-    ax.plot(line_bottom[:, 0], line_bottom[:, 1], 'b-')
-    ax.plot(line_right[:, 0], line_right[:, 1], 'b-')
-    ax.plot(line_left[:, 0], line_left[:, 1], 'b-')
+        base_ylim = max(bat_sol.radii) * 1.2
+        max_disp = np.max(np.abs(exaggerate * bat_sol.y_sol))
+        y_lim = max(base_ylim, max_disp + base_ylim)
 
-    ax.plot(rline_top[:, 0], rline_top[:, 1], 'r-')
-    ax.plot(rline_bottom[:, 0], rline_bottom[:, 1], 'r-')
-    ax.plot(rline_right[:, 0], rline_right[:, 1], 'r-')
-    ax.plot(rline_left[:, 0], rline_left[:, 1], 'r-')
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.set_aspect('equal')
+        if exaggerate != 1.0:
+            ax.set_ylabel(f'{exaggerate}x Vertical Position (m)')
+        else:
+            ax.set_ylabel('Vertical Position (m)')
+        ax.set_xlabel('Longitudinal Position (m)')
+        ax.set_ylim(-y_lim, y_lim)
+        ax.set_xlim(min(bat_sol.zs)-bat_sol.dz, max(bat_sol.zs)+3*bat_sol.dz)
 
-    ax.plot(diag[:, 0], diag[:, 1], 'g--', label='Height after Rotation')
-    ax.set_xlim(-H, H)
-    ax.set_ylim(-H, H)
-    ax.set_aspect('equal')
-    ax.set_title('Rectangle before Rotation')
-    ax.grid(True)
-    plt.show()
+        def update(frame):
+            t_idx = frame_indices[frame]
+            ax.clear()
+            ax.set_aspect('equal')
+            if exaggerate != 1.0:
+                ax.set_ylabel(f'{exaggerate}x Vertical Position (m)')
+            else:
+                ax.set_ylabel('Forward-Backward Position (m)')
+            ax.set_xlabel('Longitudinal Position (m)')
+            ax.set_ylim(-y_lim, y_lim)
+            ax.set_xlim(min(bat_sol.zs)-bat_sol.dz, max(bat_sol.zs)+3*bat_sol.dz)
+            for i in range(bat_sol.N):
+                y_val = exaggerate * bat_sol.y_sol[i, t_idx]
+                phi_val = exaggerate_rotation * bat_sol.phi_sol[i, t_idx]
+                box = get_box(bat_sol, i, y_shift=y_val, phi=phi_val)
+                ax.plot(box[:, 0], box[:, 1], color=colors[1], alpha=0.3)
+                if i == idx:
+                    ax.plot(box[:, 0], box[:, 1], color=colors[2], alpha=1.0, linewidth=2, label = f'Impact Location')
+                    ax.legend(loc = 'lower left')
 
-    box = make_box(2, H, 1)
+                ax.scatter((bat_sol.bat_prof[i, 0] - 1)*1e-2 + bat_sol.dz/2, y_val, color='r', s=5)
+            ax.set_title(f'Bat Profile at Time {bat_sol.t[t_idx]*1000:.2f} ms') #update to actually be value of t in ms
 
-    fig, ax = plt.subplots(figsize=(8, 6))
-    ax.plot(box[:, 0], box[:, 1], 'b-')
-    rotated_box = rotate(box, np.pi/6, centre=(2 + 1/2, 0))
+        ani = animation.FuncAnimation(fig, update, frames=num_frames, interval=50, repeat=False)
+        # Save the animation as an mp4 file
+        if path is not None:
+            ani.save(path, writer='ffmpeg', dpi=150)
+        plt.show()
 
-    centre = (2 + 1/2, 0)
-    diag = np.array([centre, (centre[0] + np.sin(np.pi/6)*H/2, centre[1] + np.cos(np.pi/6)*H/2)])
-    ax.plot(diag[:, 0], diag[:, 1], 'g--', label='Height after Rotation')
+#%% BALL PLOTTING FUNCTIONS
 
-    ax.scatter(centre[0], centre[1], color='g', label='Centre of Rotation')
-    ax.plot(rotated_box[:, 0], rotated_box[:, 1], 'r-')
-    # ax.set_xlim(-H, H)
-    # ax.set_ylim(-H, H)
-    ax.set_aspect('equal')
-    ax.set_title('Box before and after Rotation')
-    ax.grid(True)
-    plt.show()
-    #%%
-    zs = np.arange(0, 84)
-    Hs = np.sin(zs/84 * np.pi) * 80
-    plt.plot(zs, Hs)
-
-    shifts = np.array([0, 0.02, 0, 0.03, 0.1, 0.05] *14)
-
-    #turn into boxes and rotate
-    fig, ax = plt.subplots(figsize=(10, 6))
-    for z, H in zip(zs, Hs):
-        box = make_box(z, H, dz=1)
-        rotated_box = rotate(box, shifts[z], centre=(z + 0.5, 0))
-        # ax.plot(box[:, 0], box[:, 1], 'b-', alpha=0.3)
-        ax.plot(rotated_box[:, 0], rotated_box[:, 1], 'r-', alpha=0.3)
-    ax.set_aspect('equal')
-
-
-# %%
