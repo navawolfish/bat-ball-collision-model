@@ -1,9 +1,10 @@
 # Ignore everything in midterm_report
 midterm_report/*
 
-# But keep plots/ and the PDF
+# But keep plots/ and the tex/PDF
 !midterm_report/plots/
-!midterm_report/sample7.pdf
+!midterm_report/midterm_report.pdf
+!midterm_report/midterm_report.tex
 
 # Ignore docs
 docs/*

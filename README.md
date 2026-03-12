@@ -13,7 +13,7 @@ A computational physics project that models the transverse vibration and oscilla
 - Fourier analysis of displacement solutions with peak-finding and centroid frequency extraction
 - Forced-vibration integration with constant and Gaussian force pulses at the impact slice
 - Animated bat oscillation (`.mp4`)
-- **Coupled ball–bat collision** using the two-phase nonlinear spring model ($F = k_1 u^\alpha$ compression, $F = k_2 u^\alpha$ expansion)
+- **Coupled ball–bat collision** using the two-phase nonlinear spring model ($F = k_1 u^\alpha$ compression, $F = k_2 u^\beta$ expansion)
 - **Ball exit velocity sweep** across all impact locations for standard and torpedo bats
 - **`bat_ball_collision_model.py`** — self-contained simulation script comparing standard vs. torpedo bat performance
 - JSON parameter files for reproducible bat and ball configuration
@@ -43,10 +43,10 @@ where $H$ is a $2N \times 2N$ system matrix encoding the material properties, ge
 | Parameter | Symbol | Standard Bat | Torpedo Bat |
 |---|---|---|---|
 | Bat length | $L$ | 0.84 m | 0.85 m |
-| Mass | $m$ | 0.885 kg | — |
-| Wood density | $\rho$ | 649 kg/m³ | varies |
-| Young's modulus | $Y$ | $1.814 \times 10^{10}$ N/m² | varies |
-| Shear modulus | $S$ | $1.05 \times 10^{9}$ N/m² | varies |
+| Mass | $m$ | 0.885 kg | 0.907 kg |
+| Wood density | $\rho$ | 649 kg/m³ | 690 kg/m³|
+| Young's modulus | $Y$ | $1.814 \times 10^{10}$ N/m² | $1.65 \times 10^{10}$ N/m² |
+| Shear modulus | $S$ | $1.05 \times 10^{9}$ N/m² | $0.90 \times 10^{9}$ N/m²|
 | Number of slices | $N$ | 84 | 85 |
 
 The radius profiles are loaded from empirical bat profile data (`data/r161.dat` and `data/torpedo.dat`), capturing the realistic tapered geometry.
@@ -148,12 +148,6 @@ Run directly or cell-by-cell in the VS Code interactive window:
 ```bash
 python bat_ball_collision_model.py
 ```
-
-### `rk4routine.py` — Standalone Integration Script
-
-A self-contained script that loads the bat profile, builds/loads the $H$ matrix, solves the ODE system using `scipy.integrate.solve_ivp` (RK45), and produces:
-- Heatmap plots of $y(t, z)$ and $\Phi(t, z)$
-- Animated centerline oscillation (`.mp4`)
 
 ### Notebooks
 

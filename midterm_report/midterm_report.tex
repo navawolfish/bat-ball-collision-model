@@ -1,0 +1,342 @@
+%% AASTeX v7 Template
+\documentclass[linenumbers]{aastex7}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{circuitikz}
+
+% Added for including graphics
+\usepackage{graphicx}
+
+\begin{document}
+
+\title{Examining the Effect of Bat Shape on the Exit Velocity of a Batted Ball}
+
+\author{Nava Wolfish}
+\affiliation{University of Toronto}
+\email{nava.wolfish@mail.utoronto.ca}
+
+\begin{abstract}
+
+Your abstract here.
+
+\end{abstract}
+
+\keywords{}
+
+\section{Introduction}
+%MOTIVATION
+The most crucial moment in baseball occurs within roughly 5 milliseconds. In that time, a batter swings at a pitch and (if they're lucky) makes contact with the ball. The ball flies off the bat with a certain velocity and spin, which will determine if those $\approx$5 milliseconds will result in a hit, an out (or two), a foul, or even a home run. Physically, these 5 milliseconds contain complex momentum and energy transfers, which depends on the incoming ball, bat swing profile, and the properties of the bat itself. While it's been long known to the baseball world that different bat materials can produce drastically different results, the introduction of the Torpedo bat in 2025 proved that bat shape is also a variable that should be optimized.
+
+%TORPEDO
+The Torpedo bat, designed by Aaron Leanhardt and pioneered with the New York Yankees, refocuses mass towards the ``sweet spot" of the bat. For players with a high sweet spot rate, the increase in mass should cause their batted balls to have higher exit velocities and travel further. In theoretical calculations presented on the baseball analysis site Fangraphs, Prof. Alan Nathan predicts that a Torpedo bat should have a wider sweet spot and higher exit velocities farther from the tip compared to a standard bat \citep{nathanPhysicsTorpedoBat2025}. However, physical tests of the Torpedo bat have yet to reproduce Nathan's findings. The Torpedo bat is still so novel that the desired data on exit velocities for batted balls is not yet robust for testing Nathan's theory. 
+
+%MORE AND QUESTION
+Moreover, the in-game uses of the Torpedo bat do not provide comprehensive control of other factors, such as weather and pitch performance. Given existing use cases, it is impossible to determine whether using the Torpedo bat has any in-game effect on player performance, collision efficiency, or bat speed. In this examination, we ask whether bat shape has a significant effect on the exit velocity of a batted ball. Since the data-driven approach is not yet ready for validation, we instead examine the governing physics equations. We will investigate if theoretical physics simulations enlighten the differences between the Torpedo, standard, and even novel bat shapes.
+
+%VAN ZANDT
+Existing research on the bat-ball collision is largely provided by Alan Nathan and LL Van Zandt. Van Zandt first proposes a baseball bat is not a rigid body. Rather, it oscillates or ``wiggles" in response to a collision. He models the bat as an accumulation of many small slices (sliced lengthwise, so each cross-section is circular), which are coupled to the adjacent slices. As a result, a small displacement in one bat slice propagates along the bat. The bat also shears, so each slice can move angularly with respect to the axis of the bat. The frequencies of the propagation depend not only on the stiffness and density of the bat, but also its moment of inertia tensor and each slice's cross-sectional area. Van Zandt solves for the normal modes of the bat and demonstrates how the bat's shape deforms in time as a response to a collision. 
+
+%WHY OSCILLATE?
+These normal modes are a crucial decomposition. The more energy contained within bat vibration, the less energy transfered to the exit velocity of the batted ball. Baseball players will discuss feeling large vibrations in their hands after a bad swing. They understand that certain locations (normal nodes) along the bat minimize these vibrations and result in better batted ball outcomes.
+
+%NATHAN
+Nathan elaborates on Van Zandt's work by proposing a different model for the ball and subsequent collision. Nathan models the ball as a nonlinear lossy spring, such that a collision of the ball with a rigid body causes the ball to deform and expand. The non-elastic deformation causes much of the initial kinetic energy of the ball to be lost. Nathan analyzes the energy transfers involved in the collision and ensures that, overall, energy is conserved. Constrastingly, Van Zandt does not account for energy conservation in his model. Nathan argues that energy conservation explains why his model better agrees with observational data compared to Van Zandt.
+
+
+%DO I NEED THIS?
+Since Nathan's paper in 2000, computational methods in physics have improved drastically. The capability of modern computers to integrate complex systems and simulate theoretical results motivate a second look at Nathan's equations. In his original work, Nathan decomposes his equations through the Eigenfuction bases. Contrastingly, we leverage higher computing power to directly integrate his equations without the need for tedious analytical derivation.
+
+
+In this paper, we re-integrate the differential equations proposed in \citet{nathanDynamicsBaseballBat2000a} to create a bat-ball model tool that can be broadly applied to different bat shapes. We compare our results to Nathan's findings for a standard bat and extend his model to the Torpedo bat. In this study, we determine if our integration of the Torpedo bat agrees with Nathans analysis in Fangraphs, or if we can explain discrepancies between his model and observed Torpedo-batted balls. 
+
+
+%IN THIS PAPER....
+In this paper...
+\section{Bat-Ball Collision Model}
+\subsection{The Bat}
+In accordance with Nathan and Van Zandt, we model the baseball bat discretely. We align the main axis of symmetry of the bat with the $z$-axis, and slice the bat into $N$ sections of thickness $dz$ perpendicular to the axis (see Figure \ref{fig:staticbat}). Each slice of the bat has two degrees of freedom. A slice can displace vertically from the equilibrium position and also angularly with respect to the vertical. We establish coordinates such that $i$th slice has vertical displacement $y_i$ and angular displacement $\phi_i$ (see Figure~\ref{fig:Hmatrix}). In our examination, we solve for $\Phi_i = \phi_i dz$ to maintain units of length. In total, our bat has $2N$ degrees of freedom.
+
+\begin{figure}[h]
+    \centering
+        \includegraphics[width=0.7\linewidth]{plots/bats.pdf}
+    \caption{Example radial profiles of two static baseball bats. The top bat is characteristic of a standard baseball bat, while the the bottom frame displays the radial profile of the novel Torpedo bat. Each bat is split lengthwise into slices of width $dz$. For this example, we take $dz = 0.1$cm.}
+    \label{fig:staticbat}
+\end{figure}
+
+Crucially, each bat has a measured radial profile $\{R_i\}$, where $R_i$ represents the radius of the $i$th slice of the bat. The batter's hands grasp the nob, or the 0th slice of the bat. The $N$th slice is refered to as the tip. For a solid wooden bat, each slice then has cross-sectional area $A_i = \pi R_i^2$ and moment of intertia $I_i = \pi R_i^4 / 4$. Our examination also requires three observed parameters, Young's modulus $Y_i$, shear modulus $S_i$, and density $\rho_i$. A bat is typically constructed from a continuous wooden piece, so we take the reasonable approximation that these parameters are uniform. Henceforth, the subscripts are dropped, and we refer to these parameters as $Y,S,\rho$.
+
+Van Zandt derives the equations of motion for a free bat from physics first principles. If a single slice is displaced, the neighbouring slices will impose a restoring force to equilibrium. He relates this restoring force to the torques throughout the bat and Newton's second law. The results align with Timoshenko's beam equations for oscillations of a free beams. He obtains $2N$ coupled 2nd order ordinary differential equations. These are:
+\begin{equation}\label{eq:yode}
+    \ddot{y}_i = \underbrace{\frac{S}{\rho (dz)^2}}_{\text{bat shear}}\left[\underbrace{y_{i+1} + y_{i-1} -2y_i}_{\text{displacement from neighbours}} + \underbrace{\left(\frac{A_i-A_{i-1}}{A_i}\right)(y_i - y_{i-1} + \Phi_{i-1})}_{\text{correction for non-uniform cross-sections}} + \underbrace{(\Phi_i -\Phi_{i-1})}_{\text{dependence on rotation}}\right]
+\end{equation}
+and 
+\begin{align}\label{eq:phiode}
+    \ddot{\Phi}_i =& \underbrace{\frac{Y}{\rho (dz)^2}}_{\text{bat stiffness}}\left[\underbrace{(\Phi_{i-1} + \Phi_{i+1} -2\Phi_i)}_{\text{angular displacement from neighbours}} + \underbrace{\left( \frac{I_i - I_{i-1}}{I_i} \right)(\Phi_i - \Phi_{i-1})}_{\text{correction for non-uniform cross-sections}} \right]\\ \nonumber &- \underbrace{\left(\frac{S}{2\rho I_i}\right)}_{\text{bat shear}}\left[\underbrace{A_i (y_{i+1} - y_{i-1} + \Phi_i + \Phi_{i-1})}_{\text{shear induced torque}}- \underbrace{(A_i - A_{i-1}) (y_i - y_{i-1} + \Phi_{i-1})}_{\text{correction for non-uniform cross-sections}}\right].
+\end{align}
+
+ In baseball, the knob of the bat is held in the batter's hands. However, the propogation time of a wave along the bat is much slower than the collision time with the ball. On time scales relevant to our problem, we conclude it is appropriate to consider the bat free on both ends. The first and last slices respond to no external force or torque.
+
+The equations of motion are linear and contain no first order terms, so we can rewrite them as:
+\begin{equation}
+    \ddot{\vec{\psi}} = \mathbf{H}\vec{\psi}
+\end{equation}
+
+Where $\mathbf{H}$ is a $2N\times2N$ non-symmetric matrix, and
+\begin{align}
+    \vec{\psi} &= \begin{bmatrix}
+        y_1 \\ \vdots \\ y_N \\ \Phi_1 \\ \vdots \\ \Phi_N  
+    \end{bmatrix}.
+\end{align}
+
+We can imagine $\mathbf{H}$ as a concatenation of four quadrants, each describing how a $\ddot{\psi}_i$ component depends on a first-order term. The first quadrant relates $\ddot{y}_i$ to $y_k$, the second relates $\ddot{y}_i$ to $\Phi_k$, the third relates $\ddot{\Phi}_i$ to $y_k$, and the fourth relates $\ddot{\Phi}_i$ to $\Phi_k$ (See Figure \ref{fig:Hmatrix}). Since each slice is only coupled to its neighbours, we expect each quadrant of $\mathbf{H}$ to be tridiagonal.
+\begin{figure}[h!]
+\centering
+\begin{circuitikz}
+    % Title
+    \node[font=\large\bfseries] at (4,7) {Summary of $\mathbf{H}$ components};
+    
+    % Square bracket: left bracket (bold, moved outward)
+    \draw[line width=1.5pt, rounded corners=0.2cm] (-0.3,6) -- (-0.05,6);
+    \draw[line width=1.5pt, rounded corners=0.2cm] (-0.3,6) -- (-0.3,0);
+    \draw[line width=1.5pt, rounded corners=0.2cm] (-0.05,0) -- (-0.3,0);
+    
+    % Square bracket: right bracket (bold, moved outward)
+    \draw[line width=1.5pt, rounded corners=0.1cm] (8.05,6) -- (8.3,6);
+    \draw[line width=1.5pt, rounded corners=0.1cm] (8.3,6) -- (8.3,0);
+    \draw[line width=1.5pt, rounded corners=0.1cm] (8.3,0) -- (8.05,0);
+    \draw (4,0) -- (4,6);
+    \draw (0,3) -- (8,3);
+    \draw[dotted] (2.4,0) -- (2.4,6);
+    \draw[dotted] (6.4,0) -- (6.4,6);
+    \draw[dotted] (0,4.2) -- (8,4.2);
+    \draw[dotted] (0,1.2) -- (8,1.2);
+
+    % Left and right ticks at row boundaries
+    \draw (-0.45,0) -- (-0.65,0);
+    \draw (-0.45,1.2) -- (-0.65,1.2);
+    \draw (-0.45,2.9) -- (-0.65,2.9);
+    \draw (-0.45, 3.1) -- (-0.65, 3.1);
+    \draw (-0.45,4.2) -- (-0.65,4.2);
+    \draw (-0.45,6) -- (-0.65,6);
+    \draw (8.45,0) -- (8.65,0);
+    \draw (8.45,1.2) -- (8.65,1.2);
+    \draw (8.45,2.9) -- (8.65,2.9);
+    \draw (8.45,3.1) -- (8.65,3.1);
+    \draw (8.45,4.2) -- (8.65,4.2);
+    \draw (8.45,6) -- (8.65,6);
+    
+    % Left and right tick labels
+    \node[anchor=east] at (-0.65,6) {$1$};
+    \node[anchor=east] at (-0.65,4.2) {$i$};
+    \node[anchor=east] at (-0.75,3.15) {$N$};
+    \node[anchor=east] at (-0.65,2.85) {$N+1$};
+    \node[anchor=east] at (-0.65,1.2) {$N+i$};
+    \node[anchor=east] at (-0.65,0) {$2N$};
+    \node[anchor=west] at (8.65,6) {$1$};
+    \node[anchor=west] at (8.65,4.2) {$i$};
+    \node[anchor=west] at (8.75,3.15) {$N$};
+    \node[anchor=west] at (8.65,2.85) {$N+1$};
+    \node[anchor=west] at (8.65,1.2) {$N+i$};
+    \node[anchor=west] at (8.65,0) {$2N$};
+
+    % Top and bottom ticks with index labels
+    \draw (0,6) -- (0,6.2);
+    \draw (2.4,6) -- (2.4,6.2);
+    \draw (3.85,6) -- (3.85,6.2);
+    \draw (4.15,6) -- (4.15,6.2);
+    \draw (6.4,6) -- (6.4,6.2);
+    \draw (8,6) -- (8,6.2);
+    \node[anchor=south] at (0,6.2) {$1$};
+    \node[anchor=south] at (2.4,6.2) {$k$};
+    \node[anchor=south] at (3.85,6.2) {$N$};
+    \node[anchor=south] at (4.5,6.2) {$N+1$};
+    \node[anchor=south] at (6.4,6.2) {$N+k$};
+    \node[anchor=south] at (8,6.2) {$2N$};
+
+    \draw (0,0) -- (0,-0.2);
+    \draw (2.4,0) -- (2.4,-0.2);
+    \draw (3.85,0) -- (3.85,-0.2);
+    \draw (4.15,0) -- (4.15,-0.2);
+    \draw (6.4,0) -- (6.4,-0.2);
+    \draw (8,0) -- (8,-0.2);
+    \node[anchor=north] at (0,-0.2) {$1$};
+    \node[anchor=north] at (2.4,-0.2) {$k$};
+    \node[anchor=north] at (3.85,-0.2) {$N$};
+    \node[anchor=north] at (4.5,-0.2) {$N+1$};
+    \node[anchor=north] at (6.4,-0.2) {$N+k$};
+    \node[anchor=north] at (8,-0.2) {$2N$};
+
+    % Quadrant labels/placeholders
+    \node[align=center, font=\small] at (2,4.5) {Terms relating\\acceleration of $i$th slice\\to $k$th slice's displacement.};
+    \node[align=center, font=\small] at (6,4.5) {Terms relating\\acceleration of $i$th slice\\to $k$th slice's angle.};
+    \node[align=center, font=\small] at (2,1.5) {Terms relating angular\\acceleration of $i$th slice to\\$k$th slice's displacement.};
+    \node[align=center, font=\small] at (6,1.5) {Terms relating angular\\acceleration of $i$th slice to\\$k$th slice's angle.};
+    % Quadrant numbers in red
+    \node[font=\small, color=red, anchor=west] at (0.3,5.7) {Quadrant 1};
+    \node[font=\small, color=red, anchor=west] at (4.3,5.7) {Quadrant 2};
+    \node[font=\small, color=red, anchor=west] at (0.3,2.7) {Quadrant 3};
+    \node[font=\small, color=red, anchor=west] at (4.3,2.7) {Quadrant 4};
+\end{circuitikz}
+\caption{Schematic explaining the formation of the matrix $\mathbf{H}$, which is the defining matrix of our equations of motion. $\mathbf{H}$ contains four quadrants, each with a coefficient that relates an element of $\ddot{\psi}$ to $\psi$. The first quadrant relates $\ddot{y}_i$ to $y_k$, the second relates $\ddot{y}_i$ to $\Phi_k$, the third relates $\ddot{\Phi}_i$ to $y_k$, and the fourth relates $\ddot{\Phi}_i$ to $\Phi_k$. Each quadrant has shape $N\times N$, yielding $\mathbf{H}$ to have shape $2N\times 2N$.}
+\label{fig:Hmatrix}
+\end{figure}
+First, we define
+\begin{align}
+    \Lambda &\equiv \frac{S}{\rho (dz)^2} & \Upsilon &\equiv \frac{Y}{\rho (dz)^2}.
+\end{align}
+
+We consider the rows $i \in \{2, 3, ..., N-1\}$. These rows are the central rows of $\mathbf{H}$ and are independent of the boundary conditions imposed on the bat. We also let $j = i + N$ as an index for quadrants 2, 3, and 4. We obtain components of $\mathbf{H}$ from Equations \ref{eq:yode} and \ref{eq:phiode}, as outlined in Table \ref{tab:Hcomps}.
+
+
+\begin{table}[h!]
+    \centering
+    {\renewcommand{\arraystretch}{1.6}
+    \begin{tabular}{|p{0.1\textwidth}|p{0.4\textwidth}|p{0.4\textwidth}|}
+        \hline
+        &\textbf{Quadrant 1} & \textbf{Quadrant 2} \\ 
+        \hline
+        \textbf{Diagonal}&relevant indices $\{(i, i)\}$ & relevant indices $\{(i, j)\}$\\
+
+        \hline \hline
+        Upper
+        & $\displaystyle H_{i,i+1} = \Lambda$
+        & $\displaystyle H_{i, j+1} = \frac{\Lambda}{2}$
+        \\
+        Main 
+        & $\displaystyle H_{i,i} = -\Lambda\left(1+\frac{A_{i-1}}{A_i}\right)$
+        & $\displaystyle H_{i, j} = \frac{\Lambda}{2}\left(1 - \frac{A_{i-1}}{A_i}\right)$
+        \\
+        Lower
+        & $\displaystyle H_{i,i-1} = \Lambda \frac{A_{i-1}}{A_i}$
+        & $\displaystyle H_{i, j-1} = -\Lambda \frac{A_{i-1}}{2A_i}$
+        \\
+
+        \hline 
+        \hline
+        & \textbf{Quadrant 3} & \textbf{Quadrant 4} \\ 
+        \hline
+        \textbf{Diagonal}& relevant indices $\{(j, i)\}$ & relevant indices $\{(j, j)\}$\\
+
+        \hline \hline
+        Upper
+        & $\displaystyle H_{j,i+1} = -\Lambda \frac{A_i(dz)^2}{2I_i}$
+        & $\displaystyle H_{j, j+1} = \Upsilon - \Lambda \frac{A_i (dz^2)}{4I_i}$
+        \\
+        Main 
+        & $\displaystyle H_{j,i} = \Lambda \frac{A_i (dz)^2}{2I_i}\left(1 - \frac{A_{i-1}}{A_i}\right)$
+        & $\displaystyle H_{j, j} = -\Upsilon\left(1 + \frac{I_{i-1}}{I_i}\right) - \Lambda\frac{A_i (dz)^2}{4I_i}\left(1+\frac{A_{i-1}}{A_i}\right) $
+        \\
+        Lower
+        & $\displaystyle H_{j,i-1} = \Lambda \frac{A_{i-1}(dz)^2}{2I_i}$
+        & $\displaystyle H_{i, j-1} = -\Upsilon\left(\frac{I_{i-1}}{I_i}\right) - \Lambda\frac{A_i (dz)^2}{4I_i}$
+        
+        \\
+        \hline
+    \end{tabular}
+    }
+    \caption{The central components of the marix $\mathbf{H}$.}
+    \label{tab:Hcomps}
+\end{table}
+
+Next, we consider the edges of each quadrant. Invoking our boundary conditions, we obtain the components outlined in Table \ref{tab:Hboundary}.
+
+\begin{table}[h!]
+    \centering
+    {\renewcommand{\arraystretch}{1.6}
+    \begin{tabular}{|p{0.1\textwidth}|p{0.4\textwidth}|p{0.4\textwidth}|}
+        \hline
+        &\textbf{Quadrant 1} & \textbf{Quadrant 2} \\ 
+        \hline
+        \textbf{Boundary}&  relevant indices $\{(i, i)\}$ & relevant indices $\{(i, j)\}$\\
+
+        \hline \hline
+        Knob
+        & $\displaystyle H_{1,1} = -\Lambda$
+        & $\displaystyle H_{1, N+1} = \frac{\Lambda}{2}$
+        \\
+        & $\displaystyle H_{1, 2} = \Lambda$
+        & $\displaystyle H_{1, N+2} = \frac{\Lambda}{2}$
+        \\
+
+        Tip
+        & $\displaystyle H_{N,N-1} = \Lambda \frac{A_{N-1}}{A_N}$
+        & $\displaystyle H_{N, 2N-1} = -\Lambda \frac{A_{N-1}}{2A_N}$
+        \\
+
+        & $\displaystyle H_{N,N} = -\Lambda \frac{A_{N-1}}{A_N}$
+        & $\displaystyle H_{N, 2N} = -\Lambda \frac{A_{N-1}}{2A_N}$
+        \\
+        
+
+        \hline 
+        \hline
+        & \textbf{Quadrant 3} & \textbf{Quadrant 4} \\ 
+        \hline
+        \textbf{Boundary}& relevant indices $\{(j, i)\}$ & relevant indices $\{(j, j)\}$\\
+
+        \hline \hline
+        Knob
+        & $\displaystyle H_{N+1, 1} = -\Lambda \frac{A_N(dz)^2}{4I_N}$
+        & $\displaystyle H_{j, j+1} = \Upsilon - \Lambda \frac{A_i (dz^2)}{4I_i}$
+        \\
+        Main 
+        & $\displaystyle H_{j,i} = \Lambda \frac{A_i (dz)^2}{2I_i}\left(1 - \frac{A_{i-1}}{A_i}\right)$
+        & $\displaystyle H_{j, j} = -\Upsilon\left(1 + \frac{I_{i-1}}{I_i}\right) - \Lambda\frac{A_i (dz)^2}{4I_i}\left(1+\frac{A_{i-1}}{A_i}\right) $
+        \\
+        \hline
+    \end{tabular}
+    }
+    \caption{The boundary components of the marix $\mathbf{H}$.}
+    \label{tab:Hboundary}
+\end{table}
+
+All other components of $\mathbf{H}$ are uniformly zero.
+
+\subsection{System Integration and Eigenbasis}
+We begin by considering only the bat, without a model for the ball. We take a small perturbation of the $k$th slice and examine the response wave as it propogates along the bat. To integrate, we employ a Runge-Kutta 4th order integration technique across a uniform time array for a long total time compared to typical bat-ball collision times. Equipped with this solution, we can examinine how the bat vibrations change as a function of affected slice $k$ and the other bat parameters.
+
+We will also examine the normal modes of the bat. These correspond to standing waves along the length of the bat, with characteristic nodes that do not move as a reponse to a perturbation of the corresponding mode. Since we expect the Eigenvectors of $\mathbf{H}$ to form a complete and orthonormal basis, all solutions of $\psi$ can be represented as a linear combination of the Eigenfunctions. We can then describe these Eigenfunctions as forming a set of fundamental solutions.
+The counterpart Eigenvectors describe the frequency at which the bat vibrates for a given Eigenfuction. 
+
+We obtain these Eigenfunctions in two ways, and compare to the results in \citet{nathanDynamicsBaseballBat2000a}. First, we can diagonalize $\mathbf{H}$ using the appropriate \verb|numpy| functions. This diagonalization should yield the same frequencies and vectors as found by Nathan. We can also take a Fourier transform of the time integrated solution. For a system integrated for a sufficient total time $\tau$, we should recover the same frequencies within the resolution of our transform.
+\section{Results}
+In this section, we construct the matrix $\mathbf{H}$, find eigenvalues and vectors, integrate the system in time, and conduct a Fourier decomposition. We note when our results are inconsistent with Nathan's. 
+
+We perform the methodology on two bats, whose properties are outlined in Table \ref{tab:batprops}. Figure \ref{fig:staticbat} demonstrates the radial profiles for the standard and Torpedo bats, respectively. Hereon, the superscript $(s)$ denotes the standard bat and $(T)$ denotes the Torpedo bat. Note that the Torpedo bat is 1cm longer than the standard bat, so we have $N^{(s)} = 84$ and $N^{(T)} = 85$.
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{|r|c|c|l|}
+        \hline
+        Property& \textbf{Standard Bat} & \textbf{Torpedo Bat} & Units\\
+        \hline
+        Bat Length & 0.84 & 0.85 & m \\
+        Density $\rho$ & 649 & 690 & kg/m$^3$\\
+        Shear Modulus $S$ & 1.05 & 0.9 & $\times 10^{9}$ N/m$^2$ \\ 
+        Young's Modulus $Y$ & 1.814 & 1.650 & $\times 10^{10}$ N/m$^2$\\ 
+        \hline \hline
+        Slice Width $dz$ & 0.01 & 0.01 & cm\\
+        Num. Slices $N$ & 84 & 85 & slices\\
+        \hline
+    \end{tabular}
+    \caption{Properties of the Torpedo and standard bats. We also include our assigned parameters for slice width and number of slices.}
+    \label{tab:batprops}
+\end{table}
+
+
+\subsection{Constructing $\mathbf{H}$}
+We construct the matrix $\mathbf{H}$ for both bats. $\mathbf{H}$ has shape $2N\times 2N$, so $\mathbf{H}^{(s)}$ has shape $168 \times 168$ and $\mathbf{H}^{(T)}$ has shape $170\times170$. We follow the procedure outlined in the previous section to determine each matrix component.
+
+
+
+\section{Discussion}
+
+
+
+\begin{acknowledgments}
+
+\end{acknowledgments}
+
+\bibliography{references}{}
+\bibliographystyle{aasjournalv7}
+
+\end{document}
