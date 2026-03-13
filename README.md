@@ -34,7 +34,7 @@ A baseball bat is modeled as a **non-uniform Timoshenko beam**. We assume a tape
 
 These are assembled into a state vector $\psi = [y_1, \dots, y_N, \Phi_1, \dots, \Phi_N]$, and the dynamics are governed by:
 
-$$\ddot{\psi} = H \psi + M^^{-1}F(t)$$
+$$\ddot{\psi} = H \psi + M^{-1}F(t)$$
 
 where $H$ is a $2N \times 2N$ system matrix encoding the material properties, geometry, and boundary conditions, and $F(t)$ is an optional external force (e.g., ball–bat collision).
 
