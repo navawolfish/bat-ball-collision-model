@@ -40,6 +40,9 @@ with open(standard_file, 'r') as f:
     params_standard = json.load(f)
 #load bat profile
 bat_profile_standard = np.loadtxt(params_standard['profile_file'])
+#convert profile to SI units (m)
+bat_profile_standard[:, 0] *= 1e-2 #convert z from cm to m
+bat_profile_standard[:, 1] *= 1e-3/2 #convert diameter from mm to m, convert to radius
 
 #create bat instance
 bat_standard = BatOsc(bat_profile_standard, params_standard['dz']) #initialize with profile and dz
@@ -55,6 +58,10 @@ with open(torpedo_file, 'r') as f:
     params_torpedo = json.load(f)
 #load bat profile
 bat_profile_torpedo = np.loadtxt(params_torpedo['profile_file'])
+
+#convert profile to SI units (m)
+bat_profile_torpedo[:, 0] *= 1e-2 #convert z from cm to m
+bat_profile_torpedo[:, 1] *= 1e-3/2 #convert diameter from mm to m, convert to radius
 
 #create bat instance
 bat_torpedo = BatOsc(bat_profile_torpedo, params_torpedo['dz']) #initialize with profile and dz
@@ -81,13 +88,13 @@ t_eval = np.linspace(tspan[0], tspan[1], N_time) #time points to evaluate at
 
 
 #%% Set up array of impact locations
-impact_idcs = np.arange(50, len(bat_standard.zs), 1) #every 2nd point along the bat, starting from the 10th point to avoid the handle
+impact_idcs = np.arange(45, len(bat_standard.zs), 1) #every 2nd point along the bat, starting from the 10th point to avoid the handle
 # %% Now perform the simulations for each impact location and store results
 max_vel_s = np.zeros_like(impact_idcs, dtype=object)
 max_vel_t = np.zeros_like(impact_idcs, dtype=object)
 
 results = {}
-for i, impact_idx in tqdm(enumerate(impact_idcs)):
+for i, impact_idx in tqdm(enumerate(impact_idcs), disable=False):
     # print(f"Simulating impact at index {impact_idx} (z = {bat_standard.zs[impact_idx]:.3f} m)")
 
     #reset ball and bats to initial conditions before each simulation
@@ -117,14 +124,25 @@ for i, impact_idx in tqdm(enumerate(impact_idcs)):
     }
 
 #%%plot
-plt.figure(figsize=(10, 6))
+def mps_to_mph(v):
+    return v * 2.23694
+
+fig, ax = plt.subplots(figsize=(10, 6))
 plt.title(r'Exit Velocity vs Impact Location, $v_i = %s$ m/s' % ball.initial_velocity)
 plt.plot(impact_idcs *1e-2, max_vel_s, label='Standard Bat', marker='o', color = colors[0])
 plt.plot(impact_idcs *1e-2, max_vel_t, label='Torpedo Bat', marker='s', color = colors[1])
-plt.xlabel('Impact Location along Bat (m)')
-plt.ylabel('Maximum Velocity')
+ax.set_xlabel('Impact Location along Bat (m)')
+ax.set_ylabel('Maximum Velocity (m/s)', color='black')
+ax.set_ylim(min(np.min(max_vel_s), np.min(max_vel_t)) * 0.9, max(np.max(max_vel_s), np.max(max_vel_t)) * 1.1)
 plt.legend()
-plt.savefig("OMG.pdf")
+# Add secondary y-axis on right with mph scale
+ax2 = ax.twinx()
+ax2.set_ylabel('Maximum Velocity (mph)', color='black')
+ymin_mps, ymax_mps = ax.get_ylim()
+ax2.set_ylim(mps_to_mph(ymin_mps), mps_to_mph(ymax_mps))
+ax2.grid(False)
+
+plt.savefig("impact_location_vs_exit_velocity.pdf")
 plt.show()
 
 # %%

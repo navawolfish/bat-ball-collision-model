@@ -179,8 +179,9 @@ class BatOsc:
         self.bat_prof = bat_prof
         self.dz = dz
         self.N = bat_prof.shape[0]
-        self.zs = bat_prof[:, 0] * 1e-2  # convert cm to m
-        self.radii = bat_prof[:, 1] * 1e-3 / 2  # convert diameter to radius in m
+        ### FIX UNIT CONVERSIONS
+        self.zs = bat_prof[:, 0] # set z coordinates from profile (assumed to be in meters)
+        self.radii = bat_prof[:, 1] #radius from profile (assumed to be in meters)
     def set_ball(self, ball):
         """
         Sets the ball parameters for collision modelling.

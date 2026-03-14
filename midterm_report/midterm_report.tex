@@ -34,20 +34,19 @@ The Torpedo bat, designed by Aaron Leanhardt and pioneered with the New York Yan
 Moreover, the in-game uses of the Torpedo bat do not provide comprehensive control of other factors, such as weather and pitch performance. Given existing use cases, it is impossible to determine whether using the Torpedo bat has any in-game effect on player performance, collision efficiency, or bat speed. In this examination, we ask whether bat shape has a significant effect on the exit velocity of a batted ball. Since the data-driven approach is not yet ready for validation, we instead examine the governing physics equations. We will investigate if theoretical physics simulations enlighten the differences between the Torpedo, standard, and even novel bat shapes.
 
 %VAN ZANDT
-Existing research on the bat-ball collision is largely provided by Alan Nathan and LL Van Zandt. Van Zandt first proposes a baseball bat is not a rigid body. Rather, it oscillates or ``wiggles" in response to a collision. He models the bat as an accumulation of many small slices (sliced lengthwise, so each cross-section is circular), which are coupled to the adjacent slices. As a result, a small displacement in one bat slice propagates along the bat. The bat also shears, so each slice can move angularly with respect to the axis of the bat. The frequencies of the propagation depend not only on the stiffness and density of the bat, but also its moment of inertia tensor and each slice's cross-sectional area. Van Zandt solves for the normal modes of the bat and demonstrates how the bat's shape deforms in time as a response to a collision. 
+Existing research on the bat-ball collision is largely provided by Alan Nathan and LL Van Zandt. Van Zandt first proposes a baseball bat is not a rigid body. Rather, it oscillates or ``wiggles" in response to a collision. He models the bat as an accumulation of many small slices (sliced lengthwise, so each cross-section is circular), which are coupled to the adjacent slices via springs. As a result, a small displacement in one bat slice propagates along the bat. The bat also shears, so each slice can move angularly with respect to the axis of the bat. The frequencies of the propagation depend not only on the stiffness and density of the bat, but also its moment of inertia tensor and each slice's cross-sectional area. Van Zandt solves for the normal modes of the bat and demonstrates how the bat's shape deforms in time as a response to a collision. 
 
 %WHY OSCILLATE?
-These normal modes are a crucial decomposition. The more energy contained within bat vibration, the less energy transfered to the exit velocity of the batted ball. Baseball players will discuss feeling large vibrations in their hands after a bad swing. They understand that certain locations (normal nodes) along the bat minimize these vibrations and result in better batted ball outcomes.
+Determining the vibrations of the bat is a crucial decomposition. The more energy contained within bat vibration, the less energy transfered to the exit velocity of the batted ball. Baseball players will discuss feeling large vibrations in their hands after a bad swing. They understand that certain locations (normal nodes) along the bat minimize these vibrations and result in better batted ball outcomes.
 
 %NATHAN
 Nathan elaborates on Van Zandt's work by proposing a different model for the ball and subsequent collision. Nathan models the ball as a nonlinear lossy spring, such that a collision of the ball with a rigid body causes the ball to deform and expand. The non-elastic deformation causes much of the initial kinetic energy of the ball to be lost. Nathan analyzes the energy transfers involved in the collision and ensures that, overall, energy is conserved. Constrastingly, Van Zandt does not account for energy conservation in his model. Nathan argues that energy conservation explains why his model better agrees with observational data compared to Van Zandt.
 
 
 %DO I NEED THIS?
-Since Nathan's paper in 2000, computational methods in physics have improved drastically. The capability of modern computers to integrate complex systems and simulate theoretical results motivate a second look at Nathan's equations. In his original work, Nathan decomposes his equations through the Eigenfuction bases. Contrastingly, we leverage higher computing power to directly integrate his equations without the need for tedious analytical derivation.
+Since Nathan's paper in 2000, computational methods in physics have improved drastically. The capability of modern computers to integrate complex systems and simulate theoretical results motivate a second look at Nathan's equations. In his original work, Nathan decomposes his equations through the Eigenfuction bases. He finds the vectors and frequencies and theoretically derive how the Eigenfunction amplitudes relate to the forces and velocity of the ball. 
 
-
-In this paper, we re-integrate the differential equations proposed in \citet{nathanDynamicsBaseballBat2000a} to create a bat-ball model tool that can be broadly applied to different bat shapes. We compare our results to Nathan's findings for a standard bat and extend his model to the Torpedo bat. In this study, we determine if our integration of the Torpedo bat agrees with Nathans analysis in Fangraphs, or if we can explain discrepancies between his model and observed Torpedo-batted balls. 
+Contrastingly, we directly integrate Nathan's equations without need to expand in the Eigenfunction basis. In this methodology, we eliminate an entire step in the integration process. Our end goal is to recreate Nathan's finding through direct integration and extend the model to the Torpedo bat. We then determine if we agree with Nathan's analysis in Fangraphs, or if we can explain discrepancies between his model and observed Torpedo-batted balls. 
 
 
 %IN THIS PAPER....
@@ -65,7 +64,9 @@ In accordance with Nathan and Van Zandt, we model the baseball bat discretely. W
 
 Crucially, each bat has a measured radial profile $\{R_i\}$, where $R_i$ represents the radius of the $i$th slice of the bat. The batter's hands grasp the nob, or the 0th slice of the bat. The $N$th slice is refered to as the tip. For a solid wooden bat, each slice then has cross-sectional area $A_i = \pi R_i^2$ and moment of intertia $I_i = \pi R_i^4 / 4$. Our examination also requires three observed parameters, Young's modulus $Y_i$, shear modulus $S_i$, and density $\rho_i$. A bat is typically constructed from a continuous wooden piece, so we take the reasonable approximation that these parameters are uniform. Henceforth, the subscripts are dropped, and we refer to these parameters as $Y,S,\rho$.
 
-Van Zandt derives the equations of motion for a free bat from physics first principles. If a single slice is displaced, the neighbouring slices will impose a restoring force to equilibrium. He relates this restoring force to the torques throughout the bat and Newton's second law. The results align with Timoshenko's beam equations for oscillations of a free beams. He obtains $2N$ coupled 2nd order ordinary differential equations. These are:
+Van Zandt derives the equations of free motion for a bat from physics first principles. If a single slice is displaced, the neighbouring slices will impose a restoring force to equilibrium. He relates this restoring force to the torques throughout the bat and Newton's second law. The results align with Timoshenko's beam equations for oscillations of a free beams. He obtains $2N$ coupled 2nd order ordinary differential equations. These are:
+
+
 \begin{equation}\label{eq:yode}
     \ddot{y}_i = \underbrace{\frac{S}{\rho (dz)^2}}_{\text{bat shear}}\left[\underbrace{y_{i+1} + y_{i-1} -2y_i}_{\text{displacement from neighbours}} + \underbrace{\left(\frac{A_i-A_{i-1}}{A_i}\right)(y_i - y_{i-1} + \Phi_{i-1})}_{\text{correction for non-uniform cross-sections}} + \underbrace{(\Phi_i -\Phi_{i-1})}_{\text{dependence on rotation}}\right]
 \end{equation}
@@ -74,7 +75,10 @@ and
     \ddot{\Phi}_i =& \underbrace{\frac{Y}{\rho (dz)^2}}_{\text{bat stiffness}}\left[\underbrace{(\Phi_{i-1} + \Phi_{i+1} -2\Phi_i)}_{\text{angular displacement from neighbours}} + \underbrace{\left( \frac{I_i - I_{i-1}}{I_i} \right)(\Phi_i - \Phi_{i-1})}_{\text{correction for non-uniform cross-sections}} \right]\\ \nonumber &- \underbrace{\left(\frac{S}{2\rho I_i}\right)}_{\text{bat shear}}\left[\underbrace{A_i (y_{i+1} - y_{i-1} + \Phi_i + \Phi_{i-1})}_{\text{shear induced torque}}- \underbrace{(A_i - A_{i-1}) (y_i - y_{i-1} + \Phi_{i-1})}_{\text{correction for non-uniform cross-sections}}\right].
 \end{align}
 
- In baseball, the knob of the bat is held in the batter's hands. However, the propogation time of a wave along the bat is much slower than the collision time with the ball. On time scales relevant to our problem, we conclude it is appropriate to consider the bat free on both ends. The first and last slices respond to no external force or torque.
+
+Through analysis of these equations, we see that in response to a perturbation we'd expect lighter slices (small $A_i$) to have a higher maximum displacement compared to more massive slices (high $A_i$).
+
+ In baseball, the knob of the bat is held in the batter's hands. However, the propogation time of a wave along the bat is much slower than the collision time with the ball. On time scales relevant to our problem, we conclude it is appropriate to consider the bat free on both ends. In other words, the first and last slices respond to no external force or torque. They only react to the displacement of internal slices.
 
 The equations of motion are linear and contain no first order terms, so we can rewrite them as:
 \begin{equation}
@@ -187,6 +191,54 @@ First, we define
 
 We consider the rows $i \in \{2, 3, ..., N-1\}$. These rows are the central rows of $\mathbf{H}$ and are independent of the boundary conditions imposed on the bat. We also let $j = i + N$ as an index for quadrants 2, 3, and 4. We obtain components of $\mathbf{H}$ from Equations \ref{eq:yode} and \ref{eq:phiode}, as outlined in Table \ref{tab:Hcomps}.
 
+Next, we consider the edges of each quadrant. Invoking our boundary conditions, we obtain the components outlined in Table \ref{tab:Hboundary}.
+
+All other components of $\mathbf{H}$ are uniformly zero.
+
+\subsection{System Integration and Eigenbasis}
+We begin by considering only the bat, without a model for the ball. We take a small perturbation of the $k$th slice and examine the response wave as it propogates along the bat. To integrate, we employ a Runge-Kutta 4th order integration technique across a uniform time array for a long total time compared to typical bat-ball collision times. Equipped with this solution, we can examinine how the bat vibrations change as a function of affected slice $k$ and the other bat parameters.
+
+We will also examine the normal modes of the bat to justify our results against \citet{nathanDynamicsBaseballBat2000a}. These modes correspond to standing waves along the length of the bat, with characteristic nodes that do not move as a reponse to a perturbation of the corresponding mode. Since we expect the Eigenvectors of $\mathbf{H}$ to form a complete and orthonormal basis, all solutions of $\psi$ can be represented as a linear combination of the Eigenfunctions. We can then describe these Eigenfunctions as forming a set of fundamental solutions.
+The counterpart Eigenvalues describe the frequency at which the bat vibrates for a given Eigenfuction. 
+
+Our final solution will not require us to expand our solution in terms of the Eigenbasis. However, this step is crucial to ensure that our results are quantitatively identical to \citet{nathanDynamicsBaseballBat2000a}.
+
+We obtain these Eigenfunctions in two ways, and compare to the results in \citet{nathanDynamicsBaseballBat2000a}. First, we can diagonalize $\mathbf{H}$ using the appropriate \verb|numpy| functions. This diagonalization should yield the same frequencies and vectors as found by Nathan. We can also take a Fourier transform of the time integrated solution. For a system integrated for a sufficient total time $\tau$, we should recover the same frequencies within the resolution of our transform.
+
+
+\section{Results}
+In this section, we construct the matrix $\mathbf{H}$, find eigenvalues and vectors, integrate the system in time, and conduct a Fourier decomposition. We note when our results are inconsistent with Nathan's. 
+
+We perform the methodology on two bats, whose properties are outlined in Table \ref{tab:batprops}. Figure \ref{fig:staticbat} demonstrates the radial profiles for the standard and Torpedo bats, respectively. Hereon, the superscript $(s)$ denotes the standard bat and $(T)$ denotes the Torpedo bat. Note that the Torpedo bat is 1cm longer than the standard bat, so we have $N^{(s)} = 84$ and $N^{(T)} = 85$.
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{|r|c|c|l|}
+        \hline
+        Property& \textbf{Standard Bat} & \textbf{Torpedo Bat} & Units\\
+        \hline
+        Bat Length & 0.84 & 0.85 & m \\
+        Density $\rho$ & 649 & 690 & kg/m$^3$\\
+        Shear Modulus $S$ & 1.05 & 0.9 & $\times 10^{9}$ N/m$^2$ \\ 
+        Young's Modulus $Y$ & 1.814 & 1.650 & $\times 10^{10}$ N/m$^2$\\ 
+        \hline \hline
+        Slice Width $dz$ & 0.01 & 0.01 & cm\\
+        Num. Slices $N$ & 84 & 85 & slices\\
+        \hline
+    \end{tabular}
+    \caption{Properties of the Torpedo and standard bats. We also include our assigned parameters for slice width and number of slices.}
+    \label{tab:batprops}
+\end{table}
+
+
+\subsection{Constructing $\mathbf{H}$}
+We construct the matrix $\mathbf{H}$ for both bats. $\mathbf{H}$ has shape $2N\times 2N$, so $\mathbf{H}^{(s)}$ has shape $168 \times 168$ and $\mathbf{H}^{(T)}$ has shape $170\times170$. We follow the procedure outlined in the previous section to determine each matrix component.
+
+
+
+\section{Discussion}
+
+\appendix
+\section{Matrix Component Tables}
 
 \begin{table}[h!]
     \centering
@@ -238,8 +290,6 @@ We consider the rows $i \in \{2, 3, ..., N-1\}$. These rows are the central rows
     \label{tab:Hcomps}
 \end{table}
 
-Next, we consider the edges of each quadrant. Invoking our boundary conditions, we obtain the components outlined in Table \ref{tab:Hboundary}.
-
 \begin{table}[h!]
     \centering
     {\renewcommand{\arraystretch}{1.6}
@@ -289,46 +339,6 @@ Next, we consider the edges of each quadrant. Invoking our boundary conditions, 
     \caption{The boundary components of the marix $\mathbf{H}$.}
     \label{tab:Hboundary}
 \end{table}
-
-All other components of $\mathbf{H}$ are uniformly zero.
-
-\subsection{System Integration and Eigenbasis}
-We begin by considering only the bat, without a model for the ball. We take a small perturbation of the $k$th slice and examine the response wave as it propogates along the bat. To integrate, we employ a Runge-Kutta 4th order integration technique across a uniform time array for a long total time compared to typical bat-ball collision times. Equipped with this solution, we can examinine how the bat vibrations change as a function of affected slice $k$ and the other bat parameters.
-
-We will also examine the normal modes of the bat. These correspond to standing waves along the length of the bat, with characteristic nodes that do not move as a reponse to a perturbation of the corresponding mode. Since we expect the Eigenvectors of $\mathbf{H}$ to form a complete and orthonormal basis, all solutions of $\psi$ can be represented as a linear combination of the Eigenfunctions. We can then describe these Eigenfunctions as forming a set of fundamental solutions.
-The counterpart Eigenvectors describe the frequency at which the bat vibrates for a given Eigenfuction. 
-
-We obtain these Eigenfunctions in two ways, and compare to the results in \citet{nathanDynamicsBaseballBat2000a}. First, we can diagonalize $\mathbf{H}$ using the appropriate \verb|numpy| functions. This diagonalization should yield the same frequencies and vectors as found by Nathan. We can also take a Fourier transform of the time integrated solution. For a system integrated for a sufficient total time $\tau$, we should recover the same frequencies within the resolution of our transform.
-\section{Results}
-In this section, we construct the matrix $\mathbf{H}$, find eigenvalues and vectors, integrate the system in time, and conduct a Fourier decomposition. We note when our results are inconsistent with Nathan's. 
-
-We perform the methodology on two bats, whose properties are outlined in Table \ref{tab:batprops}. Figure \ref{fig:staticbat} demonstrates the radial profiles for the standard and Torpedo bats, respectively. Hereon, the superscript $(s)$ denotes the standard bat and $(T)$ denotes the Torpedo bat. Note that the Torpedo bat is 1cm longer than the standard bat, so we have $N^{(s)} = 84$ and $N^{(T)} = 85$.
-\begin{table}[h!]
-    \centering
-    \begin{tabular}{|r|c|c|l|}
-        \hline
-        Property& \textbf{Standard Bat} & \textbf{Torpedo Bat} & Units\\
-        \hline
-        Bat Length & 0.84 & 0.85 & m \\
-        Density $\rho$ & 649 & 690 & kg/m$^3$\\
-        Shear Modulus $S$ & 1.05 & 0.9 & $\times 10^{9}$ N/m$^2$ \\ 
-        Young's Modulus $Y$ & 1.814 & 1.650 & $\times 10^{10}$ N/m$^2$\\ 
-        \hline \hline
-        Slice Width $dz$ & 0.01 & 0.01 & cm\\
-        Num. Slices $N$ & 84 & 85 & slices\\
-        \hline
-    \end{tabular}
-    \caption{Properties of the Torpedo and standard bats. We also include our assigned parameters for slice width and number of slices.}
-    \label{tab:batprops}
-\end{table}
-
-
-\subsection{Constructing $\mathbf{H}$}
-We construct the matrix $\mathbf{H}$ for both bats. $\mathbf{H}$ has shape $2N\times 2N$, so $\mathbf{H}^{(s)}$ has shape $168 \times 168$ and $\mathbf{H}^{(T)}$ has shape $170\times170$. We follow the procedure outlined in the previous section to determine each matrix component.
-
-
-
-\section{Discussion}
 
 
 
