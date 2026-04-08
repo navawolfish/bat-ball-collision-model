@@ -1,9 +1,0 @@
-{
-    "name": "torpedo",
-    "profile_file": "data/torpedo.dat",
-    "mass": 0.907,
-    "rho": 690,
-    "Y": 1.65e10,
-    "S": 9.0e8,
-    "dz": 0.01
-}

@@ -49,7 +49,7 @@ where $H$ is a $2N \times 2N$ system matrix encoding the material properties, ge
 | Shear modulus | $S$ | $1.05 \times 10^{9}$ N/m² | $0.90 \times 10^{9}$ N/m²|
 | Number of slices | $N$ | 84 | 85 |
 
-The radius profiles are loaded from empirical bat profile data (`data/r161.dat` and `data/torpedo.dat`), capturing the realistic tapered geometry.
+The radius profiles are loaded from empirical bat profile data (`data/bats/r161.dat` and `data/bats/torpedo.dat`), capturing the realistic tapered geometry.
 
 ## Repository Structure
 
@@ -62,19 +62,25 @@ The radius profiles are loaded from empirical bat profile data (`data/r161.dat` 
 ├── substack.ipynb                # Supplementary notebook: standing wave exploration
 ├── testing_H.ipynb               # H matrix validation against Alan Nathan's reference
 ├── data/
-│   ├── r161.dat                  # Standard bat radius profile
-│   ├── torpedo.dat               # Torpedo bat radius profile
-│   ├── bat_profile_pts.txt       # Bat profile data points
-│   ├── standard_bat_params.json  # Standard bat parameters (mass, rho, Y, S, dz)
-│   ├── torpedo_bat_params.json   # Torpedo bat parameters
-│   ├── ball_params.json          # Ball parameters (v_init, e0, k1, alpha, mb, Rb)
-│   ├── H_matrix.csv              # Computed system matrix H (full)
-│   ├── H_matrix_Alan.csv         # Alan Nathan's reference H (standard bat, sparse CSV)
-│   ├── H_matrix_torpedo.csv      # Alan Nathan's reference H (torpedo bat, sparse CSV)
-│   ├── H_matrix_nava.csv         # Nava's computed H (standard bat)
-│   ├── H_matrix_nava_torpedo.csv # Nava's computed H (torpedo bat)
-│   ├── H_matrix_nonzero.csv      # Sparse (non-zero entries only) representation of H
-│   ├── hMatrix_torpedo.txt       # Raw torpedo H matrix data (text format)
+│   ├── balls/
+│   │   ├── ball_params.json          # Ball parameters (v_init, e0, k1, alpha, mb, Rb)
+│   │   └── ball_params_lowv.json     # Low-speed ball parameters
+│   ├── bats/
+│   │   ├── r161.dat                  # Standard bat radius profile
+│   │   ├── torpedo.dat               # Torpedo bat radius profile
+│   │   ├── r161_scaled.dat           # Standard bat profile (scaled units)
+│   │   ├── torpedo_scaled.dat        # Torpedo bat profile (scaled units)
+│   │   ├── bat_profile_pts.txt       # Bat profile data points
+│   │   ├── standard_bat_params.json  # Standard bat parameters (mass, rho, Y, S, dz)
+│   │   └── torpedo_bat_params.json   # Torpedo bat parameters
+│   ├── matrices/
+│   │   ├── H_matrix.csv              # Computed system matrix H (full)
+│   │   ├── H_matrix_Alan.csv         # Alan Nathan's reference H (standard bat, sparse CSV)
+│   │   ├── H_matrix_torpedo.csv      # Alan Nathan's reference H (torpedo bat, sparse CSV)
+│   │   ├── H_matrix_nava.csv         # Nava's computed H (standard bat)
+│   │   ├── H_matrix_nava_torpedo.csv # Nava's computed H (torpedo bat)
+│   │   ├── H_matrix_nonzero.csv      # Sparse (non-zero entries only) representation of H
+│   │   └── hMatrix_torpedo.txt       # Raw torpedo H matrix data (text format)
 │   └── standard_bat_eigenvalues.csv  # Saved eigenvalues for the standard bat
 ├── midterm_report/
 │   ├── midterm_report.tex        # LaTeX source
@@ -176,7 +182,7 @@ from bat_class import BatOsc, Ball
 import numpy as np
 
 # Load parameters from JSON
-with open('data/standard_bat_params.json') as f:
+with open('data/bats/standard_bat_params.json') as f:
     p = json.load(f)
 
 bat_prof = np.loadtxt(p['profile_file'])

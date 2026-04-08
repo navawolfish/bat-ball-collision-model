@@ -313,6 +313,84 @@ def plot_mode_shapes(eig_df, zs, N, num_modes=10, nodes=None, colors=None):
     plt.tight_layout()
     return fig, axs
 
+
+def plot_mode_shapes_compare(eig_dfs, zs_list, N_list, title='Bat Mode Shapes Comparison',
+                             num_modes=5, labels=None, colors=None, rigid=True, nodes = None):
+    """Compare mode shapes from two bats on shared subplots.
+
+    :param eig_dfs: list with two DataFrames from compute_eigenfrequencies
+    :param zs_list: list with two z-position arrays
+    :param N_list: list with two spatial lengths
+    :param title: figure title
+    :param num_modes: number of modes to plot (includes 2 rigid modes)
+    :param labels: curve labels for the two bats
+    :param colors: two color strings for the two bats
+    :param rigid: whether to include rigid modes in the plot (if False, will only plot flexible modes starting from mode index 2)
+    :return: fig, axs
+    """
+    if len(eig_dfs) != 2 or len(zs_list) != 2 or len(N_list) != 2:
+        raise ValueError('eig_dfs, zs_list, and N_list must each contain exactly two entries.')
+
+    if labels is None:
+        labels = ['Bat 1', 'Bat 2']
+    if colors is None:
+        colors = ['#EFA00B', '#6A4C93']
+    
+    rigid_add = 0 if rigid else 2
+    nodes_0 = find_mode_nodes(eig_dfs[0], zs_list[0], N_list[0], num_modes=(num_modes + rigid_add))[rigid_add:]
+    nodes_1 = find_mode_nodes(eig_dfs[1], zs_list[1], N_list[1], num_modes=(num_modes + rigid_add))[rigid_add:]
+
+    fig, axs = plt.subplots(num_modes, 1, sharex=True, figsize=(9, 2.5 * num_modes))
+    if num_modes == 1:
+        axs = [axs]
+    
+    
+
+    for mode_idx in range(num_modes):
+        ax = axs[mode_idx]
+        y0 = eig_dfs[0].iloc[mode_idx + rigid_add]['eigenvector'].real[:N_list[0]]
+        y1 = eig_dfs[1].iloc[mode_idx + rigid_add]['eigenvector'].real[:N_list[1]]
+
+        # Normalize per mode so shape differences are visible even when amplitudes differ.
+        y0 = y0 / np.max(np.abs(y0)) if np.max(np.abs(y0)) > 0 else y0
+        y1 = y1 / np.max(np.abs(y1)) if np.max(np.abs(y1)) > 0 else y1
+
+        ax.plot(zs_list[0], y0, color=colors[0], linestyle='-', linewidth=2, label=labels[0])
+        ax.plot(zs_list[1], y1, color=colors[1], linestyle='--', linewidth=2, label=labels[1])
+
+        # Only show nodes for flexible modes (not rigid modes 0,1)
+        if nodes:
+            if mode_idx >= 2 or not rigid:
+                valid_0 = nodes_0[mode_idx][(nodes_0[mode_idx] >= 0) & (nodes_0[mode_idx] < N_list[0])]
+                valid_1 = nodes_1[mode_idx][(nodes_1[mode_idx] >= 0) & (nodes_1[mode_idx] < N_list[1])]
+
+                # Offset node labels vertically to reduce overlap
+                for i, node in enumerate(valid_0):
+                    y_offset = 0.07 * ((-1) ** i)  # alternate up/down
+                    ax.scatter(zs_list[0][node], y0[node], marker='x', s=60, color=colors[0], zorder=3, alpha=0.9)
+                    ax.text(zs_list[0][node], y0[node] + y_offset, f'Node {node + 1}', color=colors[0], fontsize=13,
+                            ha='left', va='center', bbox=dict(facecolor='white', edgecolor='none', alpha=0.85, pad=1.5))
+
+                for i, node in enumerate(valid_1):
+                    y_offset = 0.07 * ((-1) ** (i+1))  # alternate up/down, opposite direction
+                    ax.scatter(zs_list[1][node], y1[node], marker='x', s=60, color=colors[1], zorder=3, alpha=0.9)
+                    ax.text(zs_list[1][node], y1[node] + y_offset, f'Node {node + 1}', color=colors[1], fontsize=13,
+                            ha='right', va='center', bbox=dict(facecolor='white', edgecolor='none', alpha=0.85, pad=1.5))
+
+        if mode_idx < 2 and rigid: # Only label the first two modes as rigid modes if we're including rigid modes in the plot
+            ax.set_title(f'Rigid Mode {mode_idx + 1} (f = 0 Hz)', fontweight='bold')
+        else:
+           ax.set_title(f'Mode {mode_idx - 1 + rigid_add}', fontweight='bold')
+        
+        ax.legend(loc='upper right', fontsize=10)
+        ax.grid(True, alpha=0.2)
+
+    axs[-1].set_xlabel('Position Along Bat (m)', fontweight='bold', fontsize=16)
+    axs[num_modes // 2].set_ylabel('Vibrational Amplitude', fontweight='bold', fontsize=15)
+    fig.suptitle(title, fontweight='bold', fontsize=22)
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
+    return fig, axs
+
 # %%
 if __name__ == "__main__":
     # Bat profile

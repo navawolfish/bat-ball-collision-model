@@ -171,12 +171,12 @@ def plot_bat(bat_sol, time_idx = 0, exaggerate=1.0, exaggerate_rotation=1.0, new
             top_left.append((box[0, 0], box[0, 1])) 
             ax.plot(box[:, 0], box[:, 1], color = colors[1], alpha=0.3)
             #scatter centre point
-            ax.scatter(bat_sol.bat_prof[i, 0]*1e-2 - bat_sol.dz/2, exaggerate * bat_sol.y_sol[i, time_idx], color='r', s=5)
+            ax.scatter(bat_sol.zs[i] - bat_sol.dz/2, exaggerate * bat_sol.y_sol[i, time_idx], color='r', s=5)
         ax.set_title(f'Bat Profile at Time Index {time_idx}')
         if new_fig:
             plt.show()
         return
-def animate_bat(bat_sol, exaggerate=1.0, exaggerate_rotation=1.0, interval=10, path=None, idx=-1):
+def animate_bat(bat_sol, exaggerate=1.0, exaggerate_rotation=1.0, interval=10, path=None, idx=-1, title = ''):
         """
         Animates the bat profile over time using plot_bat at intervals of 'interval' time indices.
         :param exaggerate: exaggeration factor for displacement
@@ -226,14 +226,100 @@ def animate_bat(bat_sol, exaggerate=1.0, exaggerate_rotation=1.0, interval=10, p
                     ax.plot(box[:, 0], box[:, 1], color=colors[2], alpha=1.0, linewidth=2, label = f'Impact Location')
                     ax.legend(loc = 'lower left')
 
-                ax.scatter((bat_sol.bat_prof[i, 0] - 1)*1e-2 + bat_sol.dz/2, y_val, color='r', s=5)
-            ax.set_title(f'Bat Profile at Time {bat_sol.t[t_idx]*1000:.2f} ms') #update to actually be value of t in ms
+                ax.scatter(bat_sol.zs[i] - bat_sol.dz/2, y_val, color='r', s=5)
+            ax.set_title(title or f'Bat Profile at Time {bat_sol.t[t_idx]*1000:.2f} ms') #update to actually be value of t in ms
 
         ani = animation.FuncAnimation(fig, update, frames=num_frames, interval=50, repeat=False)
         # Save the animation as an mp4 file
         if path is not None:
             ani.save(path, writer='ffmpeg', dpi=150)
         plt.show()
-
 #%% BALL PLOTTING FUNCTIONS
 
+def plot_ball_forces(ball, title = ''):
+    """
+    Plots the forces acting on the ball over time.
+    :param ball: Ball object containing the solution of the ball dynamics
+    """
+    if not hasattr(ball, 'k2') or not hasattr(ball, 'max_u'):
+        raise ValueError("ball must have attributes 'k2' and 'max_u' for plotting. Please run the simulation to compute these values.")
+    
+    u = np.linspace(0, ball.max_u, 1000) # create a range of u values from 0 to max_u
+    F1 = ball.k2 * u**ball.beta # expansion force
+    F2 = ball.k1 * u**ball.alpha # compression
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.plot(u, F1, color=colors[0], label = r'$F_e = k_2 u^{\beta}$')
+    plt.annotate(
+    '',
+    xy=(u[500], F1[500]),       # arrow head
+    xytext=(u[495], F1[495]), # arrow tail
+    arrowprops=dict(arrowstyle='<-', lw=2, mutation_scale=20, color = colors[0])
+    )
+    ax.plot(u, F2, color=colors[1], label = r'$F_c = k_1 u^{\alpha}$')
+    plt.annotate(
+    '',
+    xy=(u[500], F2[500]),       # arrow head
+    xytext=(u[505], F2[505]), # arrow tail
+    arrowprops=dict(arrowstyle='<-', lw=2, mutation_scale=20, color = colors[1])
+    )
+    plt.scatter(ball.max_u, ball.max_F, color='r', label='Max Force Point', zorder=5)
+    ax.set_xlabel(r'Deformation $u$ (m)')
+    ax.set_ylabel(r'Force $F$ (N)')
+    ax.set_title(title or 'Hysteresis Force Curve of the Ball')
+    ax.legend()
+    plt.show()
+    return
+
+
+def plot_ball_collision_dynamics(ball, title='Ball Collision Dynamics'):
+    """Plot ball displacement, velocity, and compression over collision time.
+
+    The ball object must already contain collision solution arrays.
+    Required attributes: ``t``, ``yb``, ``yb_dot``, ``u``.
+    Optional attribute: ``t_separation``.
+    """
+    required = ['t', 'yb', 'yb_dot', 'u']
+    missing = [attr for attr in required if not hasattr(ball, attr)]
+    if missing:
+        raise ValueError(
+            "ball must contain solved collision data. Missing attributes: "
+            + ", ".join(missing)
+        )
+
+    t = np.asarray(ball.t)
+    yb = np.asarray(ball.yb)
+    yb_dot = np.asarray(ball.yb_dot)
+    u = np.maximum(np.asarray(ball.u), 0)
+
+    fig, ax = plt.subplots(3, figsize=(10, 9))
+
+    t_sep = getattr(ball, 't_separation', None)
+    if t_sep is not None:
+        plot_mask = t <= t_sep * 2
+    else:
+        plot_mask = np.ones_like(t, dtype=bool)
+
+    t_ms = t[plot_mask] * 1e3
+    ax[0].plot(t_ms, yb[plot_mask], label='Ball Displacement (m)', color=colors[0])
+    ax[1].plot(t_ms, yb_dot[plot_mask], label='Ball Velocity (m/s)', color=colors[1])
+    ax[2].plot(t_ms, u[plot_mask], label='Ball Compression (m)', color=colors[2])
+    ax[2].axhline(y=ball.radius, color='r', label='Ball Radius', linewidth=1)
+
+    ax[0].set_title('Ball Displacement Over Time', fontsize=12, fontweight='normal')
+    ax[0].set_ylabel('Displacement (m)')
+    ax[1].set_title('Ball Velocity Over Time', fontsize=12, fontweight='normal')
+    ax[1].set_ylabel('Velocity (m/s)')
+    ax[2].set_title('Ball Compression Over Time', fontsize=12, fontweight='normal')
+    ax[2].set_xlabel('Time (ms)')
+    ax[2].set_ylabel('Compression (m)')
+
+    for a in ax:
+        if t_sep is not None:
+            a.axvline(x=t_sep * 1e3, color=colors[3], linestyle='--', label='Separation Time', linewidth=1)
+            a.axvspan(0, t_sep * 1e3, color=colors[3], alpha=0.05)
+            a.set_xlim(0, t_sep * 2e3)
+        a.legend(loc='lower right')
+
+    fig.suptitle(title, fontsize=14, fontweight='bold', y=0.92)
+    plt.tight_layout(rect=(0, 0.03, 1, 0.95))
+    return fig, ax
