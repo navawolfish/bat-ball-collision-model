@@ -2,29 +2,6 @@
 
 A computational physics project that models the transverse vibration and oscillation dynamics of a baseball bat according to Alan Nathan (2000). The bat is discretized into thin cross-sectional slices and the resulting coupled ODE system is integrated numerically to study how vibrations propagate along the bat after impact. Two bat geometries are compared: a **standard R161 bat** ($N = 84$) and the **Torpedo bat** ($N = 85$).
 
-## Current Progress
-
-### Completed
-- System matrix $H$ construction with free-free boundary conditions for both bat geometries
-- Validation of $H$ against Alan Nathan's reference matrices (element-wise relative error analysis)
-- Eigenmode analysis: eigenfrequencies, mode shapes, and nodal positions
-- Free-vibration integration via RK45
-- Heatmap visualisation of $y(t, z)$ and $\Phi(t, z)$
-- Fourier analysis of displacement solutions with peak-finding and centroid frequency extraction
-- Forced-vibration integration with constant and Gaussian force pulses at the impact slice
-- Animated bat oscillation (`.mp4`)
-- **Coupled ball–bat collision** using the two-phase nonlinear spring model ($F = k_1 u^\alpha$ compression, $F = k_2 u^\beta$ expansion)
-- **Ball exit velocity sweep** across all impact locations for standard and torpedo bats
-- **`bat_ball_collision_model.py`** — self-contained simulation script comparing standard vs. torpedo bat performance
-- JSON parameter files for reproducible bat and ball configuration
-- `BatOsc.validate()` for clear setup error messages
-- `BatOsc.reset()` and `Ball.reset()` for loop-safe re-integration
-- Midterm report with derivations, figures, and error analysis
-
-### To Do
-- Energy-loss modelling / hysteresis curve visualisation
-- Uncertainty/sensitivity analysis over ball parameters ($k_1$, $\alpha$, COR)
-
 ## Physics Overview
 
 A baseball bat is modeled as a **non-uniform Timoshenko beam**. We assume a tapered, free-free beam that accounts for both bending (Young's modulus $Y$) and shear deformation (shear modulus $S$). The bat is sliced into $N$ segments along its longitudinal axis, and for each slice $i$, the equations of motion couple two degrees of freedom:
@@ -49,7 +26,7 @@ where $H$ is a $2N \times 2N$ system matrix encoding the material properties, ge
 | Shear modulus | $S$ | $1.05 \times 10^{9}$ N/m² | $0.90 \times 10^{9}$ N/m²|
 | Number of slices | $N$ | 84 | 85 |
 
-The radius profiles are loaded from empirical bat profile data (`data/bats/r161.dat` and `data/bats/torpedo.dat`), capturing the realistic tapered geometry.
+The radius profiles are loaded from empirical bat profile data, capturing the realistic tapered geometry.
 
 ## Repository Structure
 
@@ -59,20 +36,12 @@ The radius profiles are loaded from empirical bat profile data (`data/bats/r161.
 ├── plot_osc.py                   # Geometry helpers: rotation, box rendering, bat visualisation
 ├── bat_ball_collision_model.py   # Sweep script: exit velocity vs. impact location (standard vs. torpedo)
 ├── do_integration.ipynb          # Main notebook: integration, eigenanalysis, Fourier, forced/ball collision
-├── substack.ipynb                # Supplementary notebook: standing wave exploration
-├── testing_H.ipynb               # H matrix validation against Alan Nathan's reference
+├── run_simulation.py             # Where the simulation is run across the bat 
 ├── data/
 │   ├── balls/
-│   │   ├── ball_params.json          # Ball parameters (v_init, e0, k1, alpha, mb, Rb)
-│   │   └── ball_params_lowv.json     # Low-speed ball parameters
+│   │   # PUT BALL JSONs HERE
 │   ├── bats/
-│   │   ├── r161.dat                  # Standard bat radius profile
-│   │   ├── torpedo.dat               # Torpedo bat radius profile
-│   │   ├── r161_scaled.dat           # Standard bat profile (scaled units)
-│   │   ├── torpedo_scaled.dat        # Torpedo bat profile (scaled units)
-│   │   ├── bat_profile_pts.txt       # Bat profile data points
-│   │   ├── standard_bat_params.json  # Standard bat parameters (mass, rho, Y, S, dz)
-│   │   └── torpedo_bat_params.json   # Torpedo bat parameters
+│   │   # PUT BAT JSONs AND PROFILES HERE
 │   ├── matrices/
 │   │   ├── H_matrix.csv              # Computed system matrix H (full)
 │   │   ├── H_matrix_Alan.csv         # Alan Nathan's reference H (standard bat, sparse CSV)
@@ -142,7 +111,7 @@ Provides:
 - `make_box(z, H, dz)` — creates rectangular box geometry for a bat slice
 - `plot_bat_disp(zs, Ri, yi, phi_i)` — renders the deformed bat shape
 
-### `bat_ball_collision_model.py` — Exit Velocity Sweep
+### `run_simulation.py` — Exit Velocity Sweep
 
 Self-contained simulation script that:
 1. Loads bat and ball parameters from JSON files in `data/`
@@ -157,9 +126,7 @@ python bat_ball_collision_model.py
 
 ### Notebooks
 
-- **`do_integration.ipynb`** — Main analysis notebook. Covers static bat visualisation (standard + torpedo side-by-side), eigenmode analysis, free-vibration integration, Fourier analysis with frequency comparison against Alan Nathan's reference values, forced-vibration tests (constant & Gaussian pulses), full ball–bat collision integration with phase-by-phase output, and animation generation.
-- **`substack.ipynb`** — Supplementary notebook for standing wave exploration on the cylindrical bat model, including jshtml animations.
-- **`testing_H.ipynb`** — Validates the independently constructed $H$ matrices against Alan Nathan's reference for both bat geometries. Computes element-wise relative errors, identifies discrepant entries by matrix quadrant, and generates publication-quality error plots saved to `midterm_report/plots/`.
+- **`SimulationAnalysis.ipynb`** — Main analysis notebook. Covers static bat visualisation (standard + torpedo side-by-side), eigenmode analysis, free-vibration integration, Fourier analysis with frequency comparison against Alan Nathan's reference values, forced-vibration tests (constant & Gaussian pulses), full ball–bat collision integration with phase-by-phase output, and animation generation.
 
 ## Getting Started
 
