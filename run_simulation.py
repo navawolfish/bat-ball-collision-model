@@ -1,15 +1,13 @@
 #%% Imports
 import numpy as np
 import matplotlib.pyplot as plt
-import json
 from tqdm import tqdm
 import os
 import pandas as pd
 
 #my imports
-from create_system_matrix import create_system_matrices, load_H_matrix
-from plot_osc import animate_bat, plot_batsol_heatmap, plot_bat_disp, make_box, rotate, plot_bat, plot_ball_forces
-from bat_class import BatOsc, Ball, bat_from_json, ball_from_json
+from plot_osc import plot_bat
+from bat_class import bat_from_json, ball_from_json
 #%% PLOT SETTINGS
 plt.rcParams.update({
     'figure.figsize': (10, 6),
@@ -41,7 +39,7 @@ all_bats = [f for f in all_bats if f.endswith('.json')] #filter to only json fil
 all_balls = os.listdir(os.path.join(DATA_PATH, "balls"))
 all_balls = [f for f in all_balls if f.endswith('.json')] #filter to only json files
 
-#%% SELECT BAT AND BALL FILES
+#%% SELECT BAT FILES
 print("Available bat files:")
 for i, f in enumerate(all_bats):
     print(f"{i+1} - {f}")
@@ -55,7 +53,7 @@ assert int(standard_file) != int(torpedo_file), "Standard and torpedo bat files 
 
 standard_file = DATA_PATH + 'bats/' + all_bats[int(standard_file) - 1]
 torpedo_file = DATA_PATH + 'bats/' + all_bats[int(torpedo_file) - 1]
-
+#%% SELECT BALL FILE
 print("Available ball files:")
 for i, f in enumerate(all_balls):
     print(f"{i+1} - {f}")
@@ -86,7 +84,7 @@ ball = ball_from_json(ball_file) #load ball parameters from json file and create
 bat_standard.ball = ball
 bat_torpedo.ball = ball
 # %% Set up time span for simulation
-tspan = (0, 0.002) #time span for simulation
+tspan = (0, 0.01) #time span for simulation
 N_time = 40000
 t_eval = np.linspace(tspan[0], tspan[1], N_time) #time points 
 #%% Set up array of impact locations
@@ -94,6 +92,8 @@ impact_idcs = np.arange(45, len(bat_standard.zs), 1)
 # %% Now perform the simulations for each impact location and store results
 torp_df = pd.DataFrame(columns=['idx', 'vf', 'max_u', 'max_F', 'coll_t'])
 standard_df = pd.DataFrame(columns=['idx', 'vf', 'max_u', 'max_F', 'coll_t'])
+torp_df['idx'] = impact_idcs
+standard_df['idx'] = impact_idcs
 
 os.makedirs("results/AdleyOld", exist_ok=True)
 os.makedirs("results/AdleyNewMod2", exist_ok=True)
@@ -119,6 +119,10 @@ for i, impact_idx in tqdm(enumerate(impact_idcs), disable=False):
     #simulate for standard bat
     # print("Simulating standard bat...")
     sol_standard = bat_standard.integrate_with_ball(tspan, ball, impact_idx, t_eval = t_eval)
+    if sol_standard is None:
+        print(f"Simulation failed for standard bat at impact index {impact_idx}. Skipping to next impact location.")
+        continue
+
     standard_df.loc[i, 'vf'] = sol_standard['yb_dot'][-1]
     standard_df.loc[i, 'max_u'] = bat_standard.ball.max_u
     standard_df.loc[i, 'max_F'] = bat_standard.ball.max_F
@@ -129,6 +133,9 @@ for i, impact_idx in tqdm(enumerate(impact_idcs), disable=False):
     #simulate for torpedo bat
     # print("Simulating torpedo bat...")
     sol_torpedo = bat_torpedo.integrate_with_ball(tspan, ball, impact_idx, t_eval = t_eval)
+    if sol_torpedo is None:
+        print(f"Simulation failed for torpedo bat at impact index {impact_idx}. Skipping to next impact location.")
+        continue
     torp_df.loc[i, 'vf'] = sol_torpedo['yb_dot'][-1]
     torp_df.loc[i, 'max_u'] = bat_torpedo.ball.max_u
     torp_df.loc[i, 'max_F'] = bat_torpedo.ball.max_F
@@ -154,8 +161,9 @@ summary_df = pd.DataFrame({
 })
 
 summary_df.to_csv("results/impact_location_vs_exit_velocitySIM2.csv", index=False)
-torp_df.to_csv("results/torpedo_bat_results.csv", index=False)
-standard_df.to_csv("results/standard_bat_results.csv", index=False)
+save_path = input("Enter the file name to save the results (without extension): ")
+torp_df.to_csv(f"results/{save_path}_torp_results.csv", index=False)
+standard_df.to_csv(f"results/{save_path}_stan_results.csv", index=False)
 #%%plot
 def mps_to_mph(v):
     """Convert velocity from meters per second to miles per hour."""

@@ -1,13 +1,13 @@
 # Fdb version 4
-["bibtex midterm_report"] 1775612065.0583 "midterm_report.aux" "midterm_report.bbl" "midterm_report" 1775612072.63138 0
+["bibtex midterm_report"] 1775612065.0583 "midterm_report.aux" "midterm_report.bbl" "midterm_report" 1775748768.32538 0
   "./aasjournalv7.bst" 1747091366 38473 2e1fe3ec7114e0efd78c4439438bfd72 ""
   "./references.bib" 1774045498.31986 6483 0c31bbdff153cc7143d241e84529358d ""
-  "midterm_report.aux" 1775611862.02758 3592 a0568094a3d2f29ec62f697f4a2f00fc "pdflatex"
+  "midterm_report.aux" 1775748768.0652 3592 a0568094a3d2f29ec62f697f4a2f00fc "pdflatex"
   (generated)
   "midterm_report.bbl"
   "midterm_report.blg"
   (rewritten before read)
-["pdflatex"] 1775611861.31062 "/Users/navawolfish/Desktop/baseball/AlanProject/midterm_report/midterm_report.tex" "midterm_report.pdf" "midterm_report" 1775612072.63154 0
+["pdflatex"] 1775748728.7017 "/Users/navawolfish/Desktop/baseball/AlanProject/midterm_report/midterm_report.tex" "midterm_report.pdf" "midterm_report" 1775748768.32645 0
   "/Users/navawolfish/Desktop/baseball/AlanProject/midterm_report/midterm_report.tex" 1774049082.56337 43403 d5e25bad608a53e4a0994c28069e7fa8 ""
   "/usr/local/texlive/2024/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2024/texmf-dist/fonts/tfm/adobe/helvetic/phvr.tfm" 1136768653 2504 ba6584b616b92101c768b6c4ffb32dd0 ""
@@ -230,16 +230,16 @@
   "/usr/local/texlive/2024/texmf-var/web2c/pdftex/pdflatex.fmt" 1727629176 3325974 0166dd414067aebfed77c24101fda487 ""
   "/usr/local/texlive/2024/texmf.cnf" 1710266656 577 e590dabc9e28c5b61546e15f63eebcdf ""
   "aastex7.cls" 1747091366 387339 d3d0cd8a289919578221ccec8367b8d6 ""
-  "midterm_report.aux" 1775611862.02758 3592 a0568094a3d2f29ec62f697f4a2f00fc "pdflatex"
-  "midterm_report.bbl" 1775612067.10183 963 25703cd42348191537045b21d89abc25 "bibtex midterm_report"
-  "midterm_report.out" 1775611862.02806 1831 e2ed834f2ca03f5c573b9d0e956e1929 "pdflatex"
+  "midterm_report.aux" 1775748768.0652 3592 a0568094a3d2f29ec62f697f4a2f00fc "pdflatex"
+  "midterm_report.bbl" 1775613541.63738 963 25703cd42348191537045b21d89abc25 "bibtex midterm_report"
+  "midterm_report.out" 1775748768.06565 1831 e2ed834f2ca03f5c573b9d0e956e1929 "pdflatex"
   "midterm_report.tex" 1774049082.56337 43403 d5e25bad608a53e4a0994c28069e7fa8 ""
-  "plots/amplitude_spectrum_comparison.pdf" 1774470387.15116 29320 e186732ce9c2e9e8af0d9d3239d4558b ""
-  "plots/bats.pdf" 1775003810.19945 22741 731ecf285f53992ed08ee5034e9b849c ""
-  "plots/batsol_heatmaps.pdf" 1774313892.19959 272235 f27dce49e13b744d8e1b81f5332f0e7b ""
+  "plots/amplitude_spectrum_comparison.pdf" 1775748422.05323 26001 7242be3179d8b53297378e621b0bccf1 ""
+  "plots/bats.pdf" 1775748348.39771 22741 180a2b1d41792f10fc7e26489e869e42 ""
+  "plots/batsol_heatmaps.pdf" 1775748408.14467 280080 a314f0692e046f46fcf5ae7f229425cf ""
   "plots/impact_location_vs_exit_velocitySIM1.pdf" 1774047472.83452 29929 ab91f02b91dd747e4c7e4cf36d28668b ""
-  "plots/impact_location_vs_exit_velocitySIM2.pdf" 1775152689.68645 30917 e1fae97d7bfbef8a2bd537eef5b1e8d3 ""
-  "plots/mode_shapes_all.pdf" 1774313863.8798 34798 8ffffc03f76ccf9bbdd65383b8397892 ""
+  "plots/impact_location_vs_exit_velocitySIM2.pdf" 1775747408.46744 30742 087094c626b40e692be4f9353193de70 ""
+  "plots/mode_shapes_all.pdf" 1775748358.48938 31764 789d133ae0a750d05cf85a5f235082ba ""
   (generated)
   "midterm_report.aux"
   "midterm_report.log"
