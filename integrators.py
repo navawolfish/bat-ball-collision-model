@@ -107,18 +107,21 @@ def bat_ode_with_ball(t, x, H, N, M_inv_diag, impact_idx, ball, phase, pbar=None
     return np.concatenate([y_dot, Phi_dot, y_ddot, Phi_ddot, [yb_dot], [yb_ddot]])
 
 
-def _event_ball_vel_zero(t, x, H, N, M_inv_diag, impact_idx, ball, phase, pbar=None):
-    """Event function: triggers when ball velocity crosses zero (max compression)."""
-    return x[4*N + 1]  # yb_dot = 0
+def _event_ball_max_comp(t, y, H, N, M_inv_diag, impact_idx, ball, phase, pbar=None):
+    """Event function: triggers when ball reaches max compression (u_dot = 0)."""
+    yb_dot = y[4*N + 1]                    # ball velocity
+    y_dot_impact = y[2*N + impact_idx]       # bat velocity at impact location
+    u_dot = y_dot_impact - yb_dot          # rate of deformation change
+    return u_dot  # crosses zero at max compression (switch from compressing to expanding)
 
-_event_ball_vel_zero.terminal = True
-_event_ball_vel_zero.direction = 1  # detect negative -> positive crossing (ball starts reversing)
+_event_ball_max_comp.terminal = True
+_event_ball_max_comp.direction = -1  # detect negative -> positive crossing (ball starts reversing)
 
 
-def _event_separation(t, x, H, N, M_inv_diag, impact_idx, ball, phase, pbar=None):
+def _event_separation(t, y, H, N, M_inv_diag, impact_idx, ball, phase, pbar=None):
     """Event function: triggers when ball separates from bat (u <= 0)."""
-    yb = x[4*N]
-    y_impact = x[impact_idx]
+    yb = y[4*N]
+    y_impact = y[impact_idx]
     u = ball.radius - (yb - y_impact)
     return u  # crosses zero when ball separates
 

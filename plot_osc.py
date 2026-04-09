@@ -278,7 +278,7 @@ def plot_ball_collision_dynamics(ball, title='Ball Collision Dynamics'):
     Required attributes: ``t``, ``yb``, ``yb_dot``, ``u``.
     Optional attribute: ``t_separation``.
     """
-    required = ['t', 'yb', 'yb_dot', 'u']
+    required = ['t', 'yb', 'yb_dot', 'u', 'F', 't_collision']
     missing = [attr for attr in required if not hasattr(ball, attr)]
     if missing:
         raise ValueError(
@@ -291,11 +291,11 @@ def plot_ball_collision_dynamics(ball, title='Ball Collision Dynamics'):
     yb_dot = np.asarray(ball.yb_dot)
     u = np.maximum(np.asarray(ball.u), 0)
 
-    fig, ax = plt.subplots(3, figsize=(10, 9))
+    fig, ax = plt.subplots(4, figsize=(10, 12), sharex=True)
 
-    t_sep = getattr(ball, 't_separation', None)
-    if t_sep is not None:
-        plot_mask = t <= t_sep * 2
+    t_coll = getattr(ball, 't_collision', None)
+    if t_coll is not None:
+        plot_mask = t <= t_coll * 2
     else:
         plot_mask = np.ones_like(t, dtype=bool)
 
@@ -304,20 +304,23 @@ def plot_ball_collision_dynamics(ball, title='Ball Collision Dynamics'):
     ax[1].plot(t_ms, yb_dot[plot_mask], label='Ball Velocity (m/s)', color=colors[1])
     ax[2].plot(t_ms, u[plot_mask], label='Ball Compression (m)', color=colors[2])
     ax[2].axhline(y=ball.radius, color='r', label='Ball Radius', linewidth=1)
+    ax[3].plot(t_ms, ball.F[plot_mask], label='Ball Force (N)', color=colors[3])
 
     ax[0].set_title('Ball Displacement Over Time', fontsize=12, fontweight='normal')
     ax[0].set_ylabel('Displacement (m)')
     ax[1].set_title('Ball Velocity Over Time', fontsize=12, fontweight='normal')
     ax[1].set_ylabel('Velocity (m/s)')
     ax[2].set_title('Ball Compression Over Time', fontsize=12, fontweight='normal')
-    ax[2].set_xlabel('Time (ms)')
     ax[2].set_ylabel('Compression (m)')
+    ax[3].set_title('Ball Force Over Time', fontsize=12, fontweight='normal')
+    ax[3].set_ylabel('Force (N)')
+    ax[3].set_xlabel('Time (ms)')
 
     for a in ax:
-        if t_sep is not None:
-            a.axvline(x=t_sep * 1e3, color=colors[3], linestyle='--', label='Separation Time', linewidth=1)
-            a.axvspan(0, t_sep * 1e3, color=colors[3], alpha=0.05)
-            a.set_xlim(0, t_sep * 2e3)
+        if t_coll is not None:
+            a.axvline(x=t_coll * 1e3, color=colors[3], linestyle='--', label='Collision Time', linewidth=1)
+            a.axvspan(0, t_coll * 1e3, color=colors[3], alpha=0.05)
+            a.set_xlim(0, t_coll * 2e3)
         a.legend(loc='lower right')
 
     fig.suptitle(title, fontsize=14, fontweight='bold', y=0.92)

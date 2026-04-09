@@ -7,7 +7,7 @@ from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d
 import pickle
 import json
-from integrators import new_bat_ode, bat_ode_with_force, bat_ode_with_ball, _event_ball_vel_zero, _event_separation
+from integrators import new_bat_ode, bat_ode_with_force, bat_ode_with_ball, _event_ball_max_comp, _event_separation
 #%% PLOT SETTINGS
 plt.rcParams.update({
     'figure.figsize': (10, 6),
@@ -81,6 +81,12 @@ def F_quad(u, k, alpha):
     Quadratic force profile for collision. Modelling the ball as a lossy spring with stiffness k and deformation u, with a nonlinearity alpha to capture the fact that the ball gets stiffer as it deforms more.
     """
     return k * u**alpha
+
+def get_0_F(F, u, threshold = 1e-7):
+    max_comp_idx = np.argmax(u)
+    F_exp = F[max_comp_idx:]
+    zero_crossings = np.where(np.abs(F_exp) < threshold)[0][0] #take first decay pt
+    return zero_crossings
 
 #%% CLASS DEFS
 class BatOsc:
@@ -273,7 +279,7 @@ class BatOsc:
         sol1 = solve_ivp(
             bat_ode_with_ball, (t_span[0], t_span[1]), x0,
             args=ode_args, method=solve_method,
-            events=[_event_ball_vel_zero],
+            events=[_event_ball_max_comp],
             rtol=rtol, atol=atol, dense_output=True, max_step=max_step
         )
 
@@ -286,6 +292,7 @@ class BatOsc:
         all_t = [sol1.t]
         all_y = [sol1.y]
 
+
         if sol1.t_events[0].size > 0:
             t_max_compress = sol1.t_events[0][0]
             x_at_max = sol1.y_events[0][0]
@@ -296,6 +303,7 @@ class BatOsc:
             max_u = ball.radius - (yb_max - y_impact_max)
             max_F = ball.compress(max_u)
             k2 = ball.get_k2(max_F, max_u)
+
             ball.k2 = k2  # store for the expansion ODE
             if verbose:
                 print(f"Max compression at t = {t_max_compress*1e3:.3f} ms: "
@@ -364,12 +372,15 @@ class BatOsc:
             # get y_ball
             ydot_b = y[4*N + 1, :]  # ball velocity over time
             # Compute max deformation and force at max compression
-            ydot_b_max = np.max(ydot_b)  # should be a positive value (max velocity in reverse direction)
-            max_u = ball.radius - (y[4*N, np.argmax(ydot_b)] - y[impact_idx, np.argmax(ydot_b)])
+            ydot_b_min = np.min(ydot_b)  # should be a positive value (max velocity in reverse direction)
+            u = ball.radius - (y[4*N, :] - y[impact_idx, :])  # deformation over time
+
+            #get maximum u
+            max_u = np.max(u)
             max_F = ball.compress(max_u)
 
             if verbose:
-                print(f"Warning: ball velocity never crossed zero (no max compression detected). The maximum deformation u detected is {max_u:.2f}, with yb_dot = {ydot_b_max:.2f} m/s at that point.")
+                print(f"Warning: ball velocity never crossed zero (no max compression detected). The maximum deformation u detected is {max_u:.2f}, with yb_dot = {ydot_b_min:.2f} m/s at that point.")
 
         # Concatenate all phases
         t_full = np.concatenate(all_t)
@@ -394,6 +405,9 @@ class BatOsc:
         self.ball.yb = y_full[4*N, :]
         self.ball.yb_dot = y_full[4*N+1, :]
         self.ball.u = ball.radius - (self.ball.yb - self.y_sol[impact_idx, :])  # deformation over time
+
+        assert np.abs(np.max(self.ball.u) - max_u) < 1e-10, "Inconsistent maximum deformation. From deformation array: max_u = {:.6f}, from ball.max_u = {:.6f}. Check that ball.u is computed correctly from yb and y_sol.".format(np.max(self.ball.u), max_u)
+        
         # ensure u does not go negative
         self.ball.u[self.ball.u < 0] = 0 # ball cannot pull on the bat, only compress
         self.ball.t = t_full
@@ -406,8 +420,8 @@ class BatOsc:
         self.ball.F = ball.F_from_u() if hasattr(ball, 'k2') else None # compute force over time if k2 is available
 
         #collision time
-        t_collision = np.where(np.abs(self.ball.F) < 1e-7 & self.ball.t > t_max_compress)[0] # when force goes to 0 (accounting for numerical precision)
-        self.t_collision = t_collision
+        t_collision = t_full[get_0_F(self.ball.F, self.ball.u)]
+        self.ball.t_collision = t_collision
 
         return {
             't': t_full,
@@ -519,11 +533,14 @@ class Ball:
         if not hasattr(self, 'u') or len(self.u) == 0:
             raise ValueError("Ball must have u attribute (deformation over time) to compute force. Ensure integrate_with_ball() has been called to set u(t).")
         
-        comp_idx = np.where(self.t == self.t_max_compress)[0] + 1 # find index of max compression time
+        comp_idx = np.argmax(self.u) # index of maximum compression, where we switch from compress to expand
         F = np.zeros_like(self.u)
-        u_comp = self.u[:comp_idx]  # deformation during compression phase
-        u_exp = self.u[comp_idx:]   # deformation during expansion phase
-        F[:comp_idx] = self.compress(u_comp)
+        u_comp = self.u[:comp_idx+1]  # include the max point
+        u_exp = self.u[comp_idx:]     # expansion starts at max
+
+        assert np.abs(self.compress(self.max_u) - self.expand(self.max_u)) < 1e-10, "Compress and expand forces must match at max_u. Check that k2 is computed correctly from max_F and max_u."
+
+        F[:comp_idx+1] = self.compress(u_comp)
         F[comp_idx:] = self.expand(u_exp)
         return F
         
