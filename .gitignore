@@ -37,7 +37,6 @@ Thumbs.db
 *.csv
 *.xlsx
 *.json
-results/
 substack_plots/
 
 # protected data
@@ -53,3 +52,9 @@ old_rk4routine.py
 
 #random
 repo_qr.png
+
+#midterm report
+midterm_report/
+!midterm_report/plots/
+!midterm_report/plots/*.pdf
+#add back pdf

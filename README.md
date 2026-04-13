@@ -1,80 +1,72 @@
 # Baseball Bat Vibration Simulation
 
-A computational physics project that models the transverse vibration and oscillation dynamics of a baseball bat according to Alan Nathan (2000). The bat is discretized into thin cross-sectional slices and the resulting coupled ODE system is integrated numerically to study how vibrations propagate along the bat after impact. Two bat geometries are compared: a **standard R161 bat** ($N = 84$) and the **Torpedo bat** ($N = 85$).
+In this repository, I simulate the **bat-ball collision** described in (Nathan, 2000) for the **standard** and **Torpedo** bat. I impact the bat with the ball across each bat's longitudinal axis to examine how the exit velocity of a baseball changes across the barrel. Then, I analyze the differences in fractional energy and collision time for both bats. 
 
-## Physics Overview
+This repository is structured to replicate the simulations for any bat or ball profiles. I create a class structure for both the bat and ball to allow easy flexibility across a range of bat shapes, stiffnesses, densities, as well as ball stiffness, non-linearity, and coefficient of restitutions (COR). 
 
-A baseball bat is modeled as a **non-uniform Timoshenko beam**. We assume a tapered, free-free beam that accounts for both bending (Young's modulus $Y$) and shear deformation (shear modulus $S$). The bat is sliced into $N$ segments along its longitudinal axis, and for each slice $i$, the equations of motion couple two degrees of freedom:
-
-- **$y_i(t)$** — transverse (vertical) displacement of slice $i$
-- **$\Phi_i(t)$** — rotation angle of the cross-section at slice $i$
-
-These are assembled into a state vector $\psi = [y_1, \dots, y_N, \Phi_1, \dots, \Phi_N]$, and the dynamics are governed by:
-
-$$\ddot{\psi} = H \psi + M^{-1}F(t)$$
-
-where $H$ is a $2N \times 2N$ system matrix encoding the material properties, geometry, and boundary conditions, and $F(t)$ is an optional external force (e.g., ball–bat collision).
-
-### Bat Parameters
-
-| Parameter | Symbol | Standard Bat | Torpedo Bat |
-|---|---|---|---|
-| Bat length | $L$ | 0.84 m | 0.85 m |
-| Mass | $m$ | 0.885 kg | 0.907 kg |
-| Wood density | $\rho$ | 649 kg/m³ | 690 kg/m³|
-| Young's modulus | $Y$ | $1.814 \times 10^{10}$ N/m² | $1.65 \times 10^{10}$ N/m² |
-| Shear modulus | $S$ | $1.05 \times 10^{9}$ N/m² | $0.90 \times 10^{9}$ N/m²|
-| Number of slices | $N$ | 84 | 85 |
-
-The radius profiles are loaded from empirical bat profile data, capturing the realistic tapered geometry.
+The physics governing the bat and ball dynamics are explained in `report`.
 
 ## Repository Structure
 
 ```
-├── bat_class.py                  # BatOsc & Ball classes: ODE integration, collision, plotting
-├── create_system_matrix.py       # System matrix H construction & eigenanalysis utilities
-├── plot_osc.py                   # Geometry helpers: rotation, box rendering, bat visualisation
-├── bat_ball_collision_model.py   # Sweep script: exit velocity vs. impact location (standard vs. torpedo)
-├── do_integration.ipynb          # Main notebook: integration, eigenanalysis, Fourier, forced/ball collision
-├── run_simulation.py             # Where the simulation is run across the bat 
-├── data/
-│   ├── balls/
-│   │   # PUT BALL JSONs HERE
-│   ├── bats/
-│   │   # PUT BAT JSONs AND PROFILES HERE
-│   ├── matrices/
-│   │   ├── H_matrix.csv              # Computed system matrix H (full)
-│   │   ├── H_matrix_Alan.csv         # Alan Nathan's reference H (standard bat, sparse CSV)
-│   │   ├── H_matrix_torpedo.csv      # Alan Nathan's reference H (torpedo bat, sparse CSV)
-│   │   ├── H_matrix_nava.csv         # Nava's computed H (standard bat)
-│   │   ├── H_matrix_nava_torpedo.csv # Nava's computed H (torpedo bat)
-│   │   ├── H_matrix_nonzero.csv      # Sparse (non-zero entries only) representation of H
-│   │   └── hMatrix_torpedo.txt       # Raw torpedo H matrix data (text format)
-│   └── standard_bat_eigenvalues.csv  # Saved eigenvalues for the standard bat
-├── midterm_report/
-│   ├── midterm_report.tex        # LaTeX source
-│   ├── plots/                    # Figures used in the report
-│   └── ...
+├── run_simulation.py              # Main simulation: sweep exit velocity vs. impact location
+├── scripts/                       # Core library modules
+│   ├── __init__.py
+│   ├── bat_class.py               # BatOsc & Ball classes: ODE integration, collision
+│   ├── create_system_matrix.py    # System matrix H construction & eigenanalysis utilities
+│   ├── integrators.py             # ODE integrators (RK4 and variants)
+│   ├── plot_osc.py                # Geometry helpers: rotation, box rendering, bat visualisation
+│   ├── unit_conversions.py        # Unit conversion utilities
+│   └── old_rk4routine.py          # Legacy RK4 implementation
+├── fourier_analysis.ipynb         # Fourier spectral analysis of bat vibrations
+├── SimulationAnalysis.ipynb       # Main analysis notebook: eigenanalysis, collision, visualization
+├── midterm_report/                # LaTeX source and working documents
+│   ├── midterm_report.tex
+│   ├── references.bib
+│   ├── plots/                     # Figures used in the report
+│   └── drafts/
+├── plots/                         # Generated simulation plots
+├── data/                          # *(ignored by .gitignore)*
+├── docs/                          # *(ignored by .gitignore)*
+├── results/                       # *(ignored by .gitignore)*
+├── substack_plots/                # *(ignored by .gitignore)*
 └── .gitignore
 ```
 
+**Note:** Directories marked with *(ignored by .gitignore)* are not tracked in version control.
+
 ## Key Modules
 
-### `bat_class.py` — `BatOsc` and `Ball` Classes
+### `scripts/bat_class.py` — `BatOsc` and `Ball` Classes
 
-The main simulation classes. Encapsulates the full workflow:
+Class structure for the bat and ball. Encapsulates the full workflow:
 
 **`BatOsc`**
 1. **Initialize** with bat profile data and slice thickness: `BatOsc(bat_prof, dz)`
 2. **Set material properties**: `set_bat_features(mass, rho, Y, S)` — also builds the mass matrix $M$ and precomputes $M^{-1}$
 3. **Build or load the system matrix**: `get_H_matrix()` — accepts a CSV path, a NumPy array, or computes from scratch
 4. **Validate setup**: `validate(require_inits, require_ball, impact_idx)` — raises a descriptive `ValueError` listing every missing step
-5. **Set initial conditions**: `set_initial_conditions(state_vec)` — a $4N$-length vector $[y_0, \Phi_0, \dot{y}_0, \dot{\Phi}_0]$
-6. **Integrate** via:
+5. **Set initial conditions**: `set_initial_conditions(state_vec)` — a $4N$-length vector $[y_0, \Phi_0, \dot{y}_0, \dot{\Phi}_0]$ with the initial conditions of each bat slice 
+6. **Attach Ball** `bat.ball = ...` - initialize ball (as below) and attach to the bat for the collision
+7. **Integrate** via:
    - `integrate_solution(t_span)` — free vibration
-   - `integrate_solution_with_collision(t_span, F)` — with external force function $F(t)$
    - `integrate_with_ball(t_span, ball, impact_idx)` — full two-phase ball–bat collision (compression → expansion → free vibration), returns `dict` with `'yb'`, `'yb_dot'`, `'t_separation'`, `'max_u'`, `'k2'`, etc.
-7. **Reset** between simulations: `reset()` — clears solution attributes for loop-safe re-use
+8. **Reset** between simulations: `reset()` — clears solution attributes for loop-safe re-use
+
+You can also load a bat from a json file using the `bat_from_json` function. The function expects a path name to a json file in the form:
+
+```
+{
+    "name": "standard", #unique bat name
+    "profile_file": "path/to/bat/shape/profile/.dat", #path to the bat shape profile, expects array of tuples [(z_i, R_i)] in cylindrical coordinates
+    "bat_length": 0.84, #in metres
+    "mass": 0.9, #in kg
+    "rho": 700, #density in kg/m^3
+    "Y": 1.5e10, #Young's modulus in N/m^2
+    "S": 1.0e9, #Shear modulus in N/m^2
+    "dz": 0.01 #slice thickness in the bat profile
+}
+```
 
 **`Ball`**
 - Stores `mass`, `radius`, `initial_velocity`, `k1`, `alpha`, `e0`
@@ -83,10 +75,39 @@ The main simulation classes. Encapsulates the full workflow:
 - `get_k2(F_max, u_max)` — computes $k_2$ from COR and max compression state
 - `reset()` — restores ball to initial state between simulations
 
-Also provides:
-- `F_quad(u, k, alpha)` — standalone quadratic force model
+You can also load a bat from a json file using the `bat_from_json` function. The function expects the path name to a json file in the form:
 
-### `create_system_matrix.py` — System Matrix Construction & Eigenanalysis
+```
+{
+    "mass": 0.146, #ball mass in kg
+    "radius": 0.0366, #ball radius in m
+    "initial_velocity": 44.704, #initial ball velocity in m/s
+    "e0": 0.50, #COR, dimensionless
+    "k1": 0.714e7, #ball stiffness in N/m^alpha
+    "alpha": 1.36 #non-linearity of the ball, dimensionless
+}
+
+```
+
+### `run_simulation.py` — Exit Velocity Sweep Simulation
+
+Self-contained simulation script that performs a complete parameter sweep across impact locations. The workflow includes:
+
+1. **Interactive bat and ball selection** — prompts user to select standard and torpedo bat JSON files, and a ball JSON file from the `data/` directory
+2. **Bat initialization** — loads both bats from JSON, builds system matrices $H$, and renders bat profile geometries
+3. **Impact location sweep** — iterates over impact indices along the bat (default: 50 to end of bat)
+4. **Collision integration** — for each impact location, runs `integrate_with_ball()` for both bat geometries simultaneously, computing exit velocity, max compression, max force, and collision time
+5. **Results aggregation** — stores all results in pandas DataFrames and saves to CSV files in the `results/` directory
+6. **Visualization** — generates plots of exit velocity vs. impact location comparing standard and torpedo geometries
+
+Run interactively in VS Code or directly from terminal:
+```bash
+python run_simulation.py
+```
+
+Output CSVs are saved to `results/` with columns for impact index, final velocity (`vf`), maximum compression (`max_u`), maximum force (`max_F`), and collision time (`coll_t`).
+
+### `scripts/create_system_matrix.py` — System Matrix Construction & Eigenanalysis
 
 Builds the $2N \times 2N$ block-tridiagonal matrix $H$:
 
@@ -104,12 +125,23 @@ Also provides eigenanalysis and plotting utilities:
 - `fourier_analysis(y_sol, t)` — FFT, peak-finding, centroid frequencies, spectrum & heatmap plots
 - `compare_frequencies(H, reference_freqs)` — tabular comparison of computed vs. reference frequencies
 
-### `plot_osc.py` — Visualization Utilities
+### `scripts/plot_osc.py` — Visualization Utilities
 
 Provides:
 - `rotate(points, angle, centre)` — 2D rotation of point arrays
 - `make_box(z, H, dz)` — creates rectangular box geometry for a bat slice
 - `plot_bat_disp(zs, Ri, yi, phi_i)` — renders the deformed bat shape
+
+### `scripts/integrators.py` — ODE Integration Methods
+
+Contains numerical ODE solvers used for bat and ball dynamics:
+- RK4 (Runge-Kutta 4th order) and variants
+- Adaptive step-size control for accuracy
+- Collision detection and phase transition handling
+
+### `scripts/unit_conversions.py` — Unit Conversion Utilities
+
+Helper functions for converting between different unit systems and physical quantities used throughout the simulation (e.g., velocity, force, compression, energy).
 
 ### `run_simulation.py` — Exit Velocity Sweep
 
@@ -121,12 +153,14 @@ Self-contained simulation script that:
 
 Run directly or cell-by-cell in the VS Code interactive window:
 ```bash
-python bat_ball_collision_model.py
+python run_simulation.py
 ```
 
 ### Notebooks
 
 - **`SimulationAnalysis.ipynb`** — Main analysis notebook. Covers static bat visualisation (standard + torpedo side-by-side), eigenmode analysis, free-vibration integration, Fourier analysis with frequency comparison against Alan Nathan's reference values, forced-vibration tests (constant & Gaussian pulses), full ball–bat collision integration with phase-by-phase output, and animation generation.
+- **`fourier_analysis.ipynb`** — Spectral analysis and Fourier decomposition of bat vibration modes.
+
 
 ## Getting Started
 
@@ -171,15 +205,6 @@ print(f"Max compression: {result['max_u']*1e3:.2f} mm")
 print(f"Separation time: {result['t_separation']*1e3:.3f} ms")
 ```
 
-### Eigenanalysis Quick Start
-
-```python
-from create_system_matrix import compute_eigenfrequencies, plot_mode_shapes, find_mode_nodes
-
-eig_df = compute_eigenfrequencies(bat.H, num_modes=10)
-nodes = find_mode_nodes(eig_df, bat.zs, bat.N, num_modes=10)
-plot_mode_shapes(eig_df, bat.zs, bat.N, num_modes=10, nodes=nodes)
-```
 
 ## References
 

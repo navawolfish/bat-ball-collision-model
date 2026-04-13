@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import os
-from create_system_matrix import create_system_matrices, load_H_matrix
+from .create_system_matrix import create_system_matrices, load_H_matrix
 #%%PLT
 #%% PLOT SETTINGS
 plt.rcParams.update({

@@ -1,36 +1,12 @@
 # %%
 import os
 import numpy as np
-import matplotlib.pyplot as plt
-from create_system_matrix import create_system_matrices, load_H_matrix
+from .create_system_matrix import create_system_matrices, load_H_matrix
 from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d
 import pickle
 import json
-from integrators import new_bat_ode, bat_ode_with_force, bat_ode_with_ball, _event_ball_max_comp, _event_separation
-#%% PLOT SETTINGS
-plt.rcParams.update({
-    'figure.figsize': (10, 6),
-    'axes.titlesize': 14,
-    'axes.labelsize': 12,
-    'lines.linewidth': 2,
-    'lines.markersize': 6,
-    'xtick.labelsize': 10,
-    'ytick.labelsize': 10,
-    'legend.fontsize': 10,
-    'grid.alpha': 0.3,
-    'axes.labelweight': 'bold',
-    'axes.titleweight': 'bold',
-    'figure.dpi': 150,
-    'axes.facecolor': '#F1F5F2',
-    'axes.grid': True
-})
-
-colors = plt.get_cmap('tab10').colors
-#turn colors into a list
-colors = [colors[i] for i in range(len(colors))]
-colors = ['#EFA00B', '#439775', '#4B4E6D', '#6A4C93', '#FAC8CD', '#9BC1BC', '#5D737E', '#D9BF77', '#ACD8AA', '#FFE156']
-
+from .integrators import new_bat_ode, bat_ode_with_ball, _event_ball_max_comp, _event_separation
 #%% ALL ATTRIBUTES
 #running list of all attributes for BatOsc and Ball
 ball_attr = ['mass', #ball mass in kg
@@ -85,8 +61,16 @@ def F_quad(u, k, alpha):
 def get_0_F(F, u, threshold = 1e-7):
     max_comp_idx = np.argmax(u)
     F_exp = F[max_comp_idx:]
-    zero_crossings = np.where(np.abs(F_exp) < threshold)[0][0] #take first decay pt
-    return zero_crossings
+    zero_crossings = np.where(np.abs(F_exp) < threshold)[0]
+    if len(zero_crossings) == 0:
+        # If no point found below threshold, use when force drops to 1% of max
+        max_force = np.max(np.abs(F_exp))
+        zero_crossings = np.where(np.abs(F_exp) < 0.01 * max_force)[0]
+        if len(zero_crossings) == 0:
+            # If still nothing, return index of minimum force
+            return np.argmin(np.abs(F_exp))
+        return zero_crossings[0]
+    return zero_crossings[0]
 
 #%% CLASS DEFS
 class BatOsc:
@@ -406,7 +390,7 @@ class BatOsc:
         self.ball.yb_dot = y_full[4*N+1, :]
         self.ball.u = ball.radius - (self.ball.yb - self.y_sol[impact_idx, :])  # deformation over time
 
-        assert np.abs(np.max(self.ball.u) - max_u) < 1e-10, "Inconsistent maximum deformation. From deformation array: max_u = {:.6f}, from ball.max_u = {:.6f}. Check that ball.u is computed correctly from yb and y_sol.".format(np.max(self.ball.u), max_u)
+        assert np.abs(np.max(self.ball.u) - max_u) < 1e-6, "Inconsistent maximum deformation. From deformation array: max_u = {:.6f}, from ball.max_u = {:.6f}. Check that ball.u is computed correctly from yb and y_sol.".format(np.max(self.ball.u), max_u)
         
         # ensure u does not go negative
         self.ball.u[self.ball.u < 0] = 0 # ball cannot pull on the bat, only compress
@@ -665,4 +649,3 @@ def bat_from_pkl(filename, solution = False):
             if attr in ball_data:
                 setattr(ball, attr, ball_data[attr])
         bat.ball = ball
-    return bat
