@@ -27,13 +27,12 @@ The physics governing the bat and ball dynamics are explained in `report`.
 │   └── drafts/
 ├── plots/                         # Generated simulation plots
 ├── data/                          # *(ignored by .gitignore)*
-├── docs/                          # *(ignored by .gitignore)*
-├── results/                       # *(ignored by .gitignore)*
-├── substack_plots/                # *(ignored by .gitignore)*
+├── results/  
+├── requirements.txt                  
 └── .gitignore
 ```
 
-**Note:** Directories marked with *(ignored by .gitignore)* are not tracked in version control.
+**Note:** Directories marked with *(ignored by .gitignore)* are not tracked in version control due to the proprietary nature of this project.
 
 ## Key Modules
 
@@ -107,59 +106,14 @@ python run_simulation.py
 
 Output CSVs are saved to `results/` with columns for impact index, final velocity (`vf`), maximum compression (`max_u`), maximum force (`max_F`), and collision time (`coll_t`).
 
-### `scripts/create_system_matrix.py` — System Matrix Construction & Eigenanalysis
+### `scripts/` - Key Python Scripts for Integration
+Further documentation on these scripts will be documented in scripts/README.md (to come).
 
-Builds the $2N \times 2N$ block-tridiagonal matrix $H$:
-
-$$H = \begin{pmatrix} H_1 & H_2 \\ H_4 & H_3 \end{pmatrix}$$
-
-where each block is an $N \times N$ tridiagonal matrix constructed from the material constants $\Lambda = S / (\rho \, dz^2)$ and $\Upsilon = Y / (\rho \, dz^2)$, and the cross-section geometry $A_i$, $I_i$. Free-free boundary conditions are applied at both ends of the bat.
-
-See midterm report for a breakdown of the components of $\mathbf{H}$.
-
-Also provides eigenanalysis and plotting utilities:
-- `compute_eigenfrequencies(H)` — eigenvalues, eigenvectors, and natural frequencies as a DataFrame
-- `find_mode_nodes(eig_df, zs, N)` — nodal positions (zero-crossings) for each mode shape
-- `plot_eigenvalue_histogram(H)` — histogram of eigenvalue real parts on a symlog scale
-- `plot_mode_shapes(eig_df, zs, N)` — eigenvector mode shapes with nodal markers
-- `fourier_analysis(y_sol, t)` — FFT, peak-finding, centroid frequencies, spectrum & heatmap plots
-- `compare_frequencies(H, reference_freqs)` — tabular comparison of computed vs. reference frequencies
-
-### `scripts/plot_osc.py` — Visualization Utilities
-
-Provides:
-- `rotate(points, angle, centre)` — 2D rotation of point arrays
-- `make_box(z, H, dz)` — creates rectangular box geometry for a bat slice
-- `plot_bat_disp(zs, Ri, yi, phi_i)` — renders the deformed bat shape
-
-### `scripts/integrators.py` — ODE Integration Methods
-
-Contains numerical ODE solvers used for bat and ball dynamics:
-- RK4 (Runge-Kutta 4th order) and variants
-- Adaptive step-size control for accuracy
-- Collision detection and phase transition handling
-
-### `scripts/unit_conversions.py` — Unit Conversion Utilities
-
-Helper functions for converting between different unit systems and physical quantities used throughout the simulation (e.g., velocity, force, compression, energy).
-
-### `run_simulation.py` — Exit Velocity Sweep
-
-Self-contained simulation script that:
-1. Loads bat and ball parameters from JSON files in `data/`
-2. Sweeps over impact locations along the bat
-3. Runs `integrate_with_ball()` for both standard and torpedo bats at each location
-4. Plots exit velocity vs. impact location for both geometries
-
-Run directly or cell-by-cell in the VS Code interactive window:
-```bash
-python run_simulation.py
-```
 
 ### Notebooks
 
 - **`SimulationAnalysis.ipynb`** — Main analysis notebook. Covers static bat visualisation (standard + torpedo side-by-side), eigenmode analysis, free-vibration integration, Fourier analysis with frequency comparison against Alan Nathan's reference values, forced-vibration tests (constant & Gaussian pulses), full ball–bat collision integration with phase-by-phase output, and animation generation.
-- **`fourier_analysis.ipynb`** — Spectral analysis and Fourier decomposition of bat vibration modes.
+- **`FourierAnalysis.ipynb`** — Spectral analysis and Fourier decomposition of bat vibration modes.
 
 
 ## Getting Started
@@ -167,36 +121,33 @@ python run_simulation.py
 ### Prerequisites
 
 - Python 3.8+
-- NumPy, SciPy, Matplotlib, pandas, tqdm
+- Dependencies listed in `requirements.txt`
+
+### Installation
 
 Install dependencies:
 
 ```bash
-pip install numpy scipy matplotlib pandas tqdm
+pip install -r requirements.txt
 ```
 
 ### Quick Start
 
 ```python
 import json
-from bat_class import BatOsc, Ball
 import numpy as np
+from scripts import BatOsc, Ball, bat_from_json, ball_from_json
 
-# Load parameters from JSON
-with open('data/bats/standard_bat_params.json') as f:
-    p = json.load(f)
-
-bat_prof = np.loadtxt(p['profile_file'])
-bat = BatOsc(bat_prof, p['dz_m'])
-bat.set_bat_features(p['mass_kg'], p['rho_kg_m3'], p['Y_N_m2'], p['S_N_m2'])
-bat.get_H_matrix()
+# Load bat and ball from JSON files
+bat = bat_from_json('data/bats/standard_bat_params.json')
+bat.get_H_matrix()  # build system matrix
 bat.validate()  # raises if anything is missing
+
+# Load ball
+ball = ball_from_json('data/balls/ball_params.json')
 
 # Set zero initial conditions
 bat.set_initial_conditions(np.zeros(4 * bat.N))
-
-# Set up ball
-ball = Ball(v=58, e0=0.53, k1=6.53e7, alpha=1.84, mass=0.145, radius=0.0366)
 
 # Run collision at impact slice 75
 result = bat.integrate_with_ball(t_span=(0, 0.01), ball=ball, impact_idx=75)
