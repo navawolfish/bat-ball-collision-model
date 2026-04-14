@@ -2,7 +2,7 @@
 
 In this repository, I simulate the **bat-ball collision** described in (Nathan, 2000) for the **standard** and **Torpedo** bat. I impact the bat with the ball across each bat's longitudinal axis to examine how the exit velocity of a baseball changes across the barrel. Then, I analyze the differences in fractional energy and collision time for both bats. 
 
-This repository is structured to replicate the simulations for any bat or ball profiles. I create a class structure for both the bat and ball to allow easy flexibility across a range of bat shapes, stiffnesses, densities, as well as ball stiffness, non-linearity, and coefficient of restitutions (COR). 
+This repository is structured to replicate the simulations for any bat or ball profiles. I create a class structure for both the bat and ball to allow easy flexibility across a range of bat shapes, stiffnesses, and densities, as well as ball stiffness, non-linearity, and coefficient of restitutions (COR). 
 
 The physics governing the bat and ball dynamics are explained in `report`.
 
