@@ -320,10 +320,9 @@ def plot_mode_shapes_compare(eig_dfs, zs_list, N_list, title='Bat Mode Shapes Co
     nodes_0 = find_mode_nodes(eig_dfs[0], zs_list[0], N_list[0], num_modes=(num_modes + rigid_add))[rigid_add:]
     nodes_1 = find_mode_nodes(eig_dfs[1], zs_list[1], N_list[1], num_modes=(num_modes + rigid_add))[rigid_add:]
 
-    fig, axs = plt.subplots(num_modes, 1, sharex=True, figsize=(9, 2.5 * num_modes))
+    fig, axs = plt.subplots(num_modes, 1, sharex=True, figsize=(6, 2 * num_modes))
     if num_modes == 1:
         axs = [axs]
-    
     
 
     for mode_idx in range(num_modes):
@@ -335,8 +334,8 @@ def plot_mode_shapes_compare(eig_dfs, zs_list, N_list, title='Bat Mode Shapes Co
         y0 = y0 / np.max(np.abs(y0)) if np.max(np.abs(y0)) > 0 else y0
         y1 = y1 / np.max(np.abs(y1)) if np.max(np.abs(y1)) > 0 else y1
 
-        ax.plot(zs_list[0], y0, color=colors[0], linestyle='-', linewidth=2, label=labels[0])
-        ax.plot(zs_list[1], y1, color=colors[1], linestyle='--', linewidth=2, label=labels[1])
+        ax.plot(zs_list[0], y0, color=colors[0], linestyle='-', linewidth=2, label=f"{labels[0]}: {eig_dfs[0].iloc[mode_idx + rigid_add]['frequency_Hz']:.2f} Hz")
+        ax.plot(zs_list[1], y1, color=colors[1], linestyle='--', linewidth=2, label=f"{labels[1]}: {eig_dfs[1].iloc[mode_idx + rigid_add]['frequency_Hz']:.2f} Hz")
 
         # Only show nodes for flexible modes (not rigid modes 0,1)
         if nodes:
@@ -360,10 +359,14 @@ def plot_mode_shapes_compare(eig_dfs, zs_list, N_list, title='Bat Mode Shapes Co
         if mode_idx < 2 and rigid: # Only label the first two modes as rigid modes if we're including rigid modes in the plot
             ax.set_title(f'Rigid Mode {mode_idx + 1} (f = 0 Hz)', fontweight='bold')
         else:
-           ax.set_title(f'Mode {mode_idx - 1 + rigid_add}', fontweight='bold')
+           ax.set_title(f'Mode {mode_idx - 1 + rigid_add}$f_S$ = {eig_dfs[0].iloc[mode_idx + rigid_add]["frequency_Hz"]:.2f} Hz, {labels[1]} $f_T$ = {eig_dfs[1].iloc[mode_idx + rigid_add]["frequency_Hz"]:.2f} Hz', fontweight='bold', fontsize=10)
         
         ax.legend(loc='upper right', fontsize=10)
         ax.grid(True, alpha=0.2)
+
+    # With shared x-axes, matplotlib hides upper tick labels by default; re-enable on all axes.
+    for ax in axs:
+        ax.tick_params(axis='x', labelbottom=True)
 
     axs[-1].set_xlabel('Position Along Bat (m)', fontweight='bold', fontsize=16)
     axs[num_modes // 2].set_ylabel('Vibrational Amplitude', fontweight='bold', fontsize=15)

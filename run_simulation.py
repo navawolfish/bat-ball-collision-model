@@ -90,14 +90,14 @@ ball = ball_from_json(ball_file) #load ball parameters from json file and create
 bat_standard.ball = ball
 bat_torpedo.ball = ball
 # %% Set up time span for simulation
-tspan = (0, 0.04) #time span for simulation
+tspan = (0, 0.02) #time span for simulation
 N_time = 10000
 t_eval = np.linspace(tspan[0], tspan[1], N_time) #time points 
 #%% Set up array of impact locations
 impact_idcs = np.arange(50, len(bat_standard.zs), 1)
 # %% Now perform the simulations for each impact location and store results
-torp_df = pd.DataFrame(columns=['idx', 'vf', 'max_u', 'max_F', 'coll_t', 'vibr_en'])
-standard_df = pd.DataFrame(columns=['idx', 'vf', 'max_u', 'max_F', 'coll_t', 'vibr_en'])
+torp_df = pd.DataFrame(columns=['idx', 'vf', 'max_u', 'max_F', 'coll_t'])
+standard_df = pd.DataFrame(columns=['idx', 'vf', 'max_u', 'max_F', 'coll_t'])
 torp_df['idx'] = impact_idcs
 standard_df['idx'] = impact_idcs
 
@@ -122,17 +122,19 @@ for i, impact_idx in tqdm(enumerate(impact_idcs), disable=False, desc="Simulatin
         print(f"Simulation failed for standard bat at impact index {impact_idx}. Skipping to next impact location.")
         continue
 
-    #get fractional energies
-    standard_envibr = get_bat_energies(bat_standard)
+    # #get fractional energies
+    # standard_envibr = get_bat_energies(bat_standard)
 
     #store results in dataframe
-    standard_df.loc[i, 'vf'] = sol_standard['yb_dot'][-1]
-    standard_df.loc[i, 'max_u'] = bat_standard.ball.max_u
-    standard_df.loc[i, 'max_F'] = bat_standard.ball.max_F
-    standard_df.loc[i, 'coll_t'] = bat_standard.ball.t_collision
+    standard_df.loc[i, ['vf', 'max_u', 'max_F', 'coll_t']] = [
+        sol_standard['yb_dot'][-1],
+        bat_standard.ball.max_u,
+        bat_standard.ball.max_F,
+        bat_standard.ball.t_collision
+    ]
     # Get energy at collision time
     coll_idx = np.argmin(np.abs(t_eval - bat_standard.ball.t_collision))
-    standard_df.iloc[i]['vibr_en'] = list(standard_envibr[:, coll_idx])
+    # standard_df.iloc[i]['vibr_en'] = list(standard_envibr[:, coll_idx])
 
     #integrate the system for the torpedo bat
     sol_torpedo = bat_torpedo.integrate_with_ball(tspan, ball, impact_idx, t_eval = t_eval)
@@ -140,18 +142,20 @@ for i, impact_idx in tqdm(enumerate(impact_idcs), disable=False, desc="Simulatin
         print(f"Simulation failed for torpedo bat at impact index {impact_idx}. Skipping to next impact location.")
         continue
 
-    #get fractional energies
-    torpedo_envibr = get_bat_energies(bat_torpedo)
+    # #get fractional energies
+    # torpedo_envibr = get_bat_energies(bat_torpedo)
 
 
     #store results in dataframe
-    torp_df.loc[i, 'vf'] = sol_torpedo['yb_dot'][-1]
-    torp_df.loc[i, 'max_u'] = bat_torpedo.ball.max_u
-    torp_df.loc[i, 'max_F'] = bat_torpedo.ball.max_F
-    torp_df.loc[i, 'coll_t'] = bat_torpedo.ball.t_collision
+    torp_df.loc[i, ['vf', 'max_u', 'max_F', 'coll_t']] = [
+        sol_torpedo['yb_dot'][-1],
+        bat_torpedo.ball.max_u,
+        bat_torpedo.ball.max_F,
+        bat_torpedo.ball.t_collision
+    ]
     # Get energy at collision time
     coll_idx = np.argmin(np.abs(t_eval - bat_torpedo.ball.t_collision))
-    torp_df.iloc[i]['vibr_en'] = list(torpedo_envibr[:, coll_idx])
+    # torp_df.iloc[i]['vibr_en'] = list(torpedo_envibr[:, coll_idx])
 
 
     #store results in dictionary for easy access later if needed

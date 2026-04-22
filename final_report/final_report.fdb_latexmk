@@ -1,14 +1,14 @@
 # Fdb version 4
-["bibtex final_report"] 1776820406.55325 "final_report.aux" "final_report.bbl" "final_report" 1776821117.83425 0
+["bibtex final_report"] 1776891192.51394 "final_report.aux" "final_report.bbl" "final_report" 1776891533.11421 0
   "./aasjournalv7.bst" 1776702922.70574 38473 2e1fe3ec7114e0efd78c4439438bfd72 ""
   "./references.bib" 1776819093.75433 10972 95c2e265f401e2e1bba1e94a0ccb32b1 ""
-  "final_report.aux" 1776821117.62313 3530 f1d0e2ee24a9b7f35917a10a46ff6bcc "pdflatex"
+  "final_report.aux" 1776891532.8788 4603 ff7b6e02f5212239de99a1c27ed7f618 "pdflatex"
   (generated)
   "final_report.bbl"
   "final_report.blg"
   (rewritten before read)
-["pdflatex"] 1776821116.91609 "/Users/navawolfish/Desktop/baseball/AlanProject/final_report/final_report.tex" "final_report.pdf" "final_report" 1776821117.83435 0
-  "/Users/navawolfish/Desktop/baseball/AlanProject/final_report/final_report.tex" 1776821116.79754 24969 0638533a81403f020c196b4736ab84be ""
+["pdflatex"] 1776891532.03758 "/Users/navawolfish/Desktop/baseball/AlanProject/final_report/final_report.tex" "final_report.pdf" "final_report" 1776891533.11433 0
+  "/Users/navawolfish/Desktop/baseball/AlanProject/final_report/final_report.tex" 1776891531.9207 31314 cb55f2ffd217b8935dec5f82a94b8b84 ""
   "/usr/local/texlive/2024/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2024/texmf-dist/fonts/tfm/adobe/helvetic/phvr.tfm" 1136768653 2504 ba6584b616b92101c768b6c4ffb32dd0 ""
   "/usr/local/texlive/2024/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1246382020 1004 54797486969f23fa377b128694d548df ""
@@ -46,6 +46,7 @@
   "/usr/local/texlive/2024/texmf-dist/fonts/tfm/public/latex-fonts/lasy8.tfm" 1136768653 520 7bb3abb160b19e0ed6ac404bb59052b7 ""
   "/usr/local/texlive/2024/texmf-dist/fonts/tfm/public/latex-fonts/lasy9.tfm" 1136768653 520 1cc7cc05f4d7bae5c23bf7516f88fa52 ""
   "/usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb" 1248133631 34811 78b52f49e893bcba91bd7581cdc144c0 ""
+  "/usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx7.pfb" 1248133631 32007 e8fa0078355f39467039935974716569 ""
   "/usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx8.pfb" 1248133631 32166 b0c356b15f19587482a9217ce1d8fa67 ""
   "/usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx9.pfb" 1248133631 32298 c6d25bb16d1eac01ebdc6d7084126a1e ""
   "/usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmcsc10.pfb" 1248133631 32001 6aeea3afe875097b1eb0da29acd61e28 ""
@@ -56,7 +57,6 @@
   "/usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb" 1248133631 36281 c355509802a035cadc5f15869451dcee ""
   "/usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb" 1248133631 36094 798f80770b3b148ceedd006d487db67c ""
   "/usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb" 1248133631 35752 024fb6c41858982481f6968b5fc26508 ""
-  "/usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb" 1248133631 31809 8670ca339bf94e56da1fc21c80635e2a ""
   "/usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb" 1248133631 32734 69e00a6b65cedb993666e42eedb3d48f ""
   "/usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb" 1248133631 32762 224316ccc9ad3ca0423a14971cfa7fc1 ""
   "/usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb" 1248133631 32726 0a1aea6fcd6468ee2cf64d891f5c43c8 ""
@@ -220,11 +220,15 @@
   "/usr/local/texlive/2024/texmf-var/web2c/pdftex/pdflatex.fmt" 1727629176 3325974 0166dd414067aebfed77c24101fda487 ""
   "/usr/local/texlive/2024/texmf.cnf" 1710266656 577 e590dabc9e28c5b61546e15f63eebcdf ""
   "aastex7.cls" 1776702922.70793 387339 d3d0cd8a289919578221ccec8367b8d6 ""
-  "final_report.aux" 1776821117.62313 3530 f1d0e2ee24a9b7f35917a10a46ff6bcc "pdflatex"
-  "final_report.bbl" 1776820406.63349 3029 5b26a04f04ca63c44af0dcbb55375254 "bibtex final_report"
-  "final_report.out" 1776821117.62358 1012 ab05c49a67da59193104a4d1a1493fc3 "pdflatex"
-  "final_report.tex" 1776821116.79754 24969 0638533a81403f020c196b4736ab84be ""
-  "plots/bats.pdf" 1776738294.51326 22741 687d1d4dc9a86537473a7219ddeed7be ""
+  "final_report.aux" 1776891532.8788 4603 ff7b6e02f5212239de99a1c27ed7f618 "pdflatex"
+  "final_report.bbl" 1776891192.70677 3029 5b26a04f04ca63c44af0dcbb55375254 "bibtex final_report"
+  "final_report.out" 1776891532.87929 1690 d0299f8c7fcb461be4e16c61f149119d "pdflatex"
+  "final_report.tex" 1776891531.9207 31314 cb55f2ffd217b8935dec5f82a94b8b84 ""
+  "plots/bats.pdf" 1776887142.92997 25590 c204a28a52e86f1c068251e5a082efff ""
+  "plots/final_velocity_comparison.pdf" 1776889682.20046 25020 5272b86a632c7ab122bf50259c3b5cac ""
+  "plots/hysteresis_curve.png" 1776887142.93679 72353 40a54b523017f054c5eecc50bc847433 ""
+  "plots/max_force_comparison.pdf" 1776889874.7114 19109 aed154b3f4f9e34f34b4513c37677d47 ""
+  "plots/mode_shapes.pdf" 1776887142.94415 33681 8f05cf8486cfb624a90a93d235bbd474 ""
   (generated)
   "final_report.aux"
   "final_report.log"

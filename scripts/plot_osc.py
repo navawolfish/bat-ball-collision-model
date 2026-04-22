@@ -44,19 +44,19 @@ def rotate(points, angle, centre=(0, 0)):
 
 def make_box(z, H, dz=0.01):
     """
-    Create a rectangular box at z (right-coord) with height H and width dz.
+    Create a rectangular slice box whose left edge is at z.
 
-    :param z: center z-coordinate
+    :param z: left-edge z-coordinate
     :param H: height of the box
     :param dz: width of the box
     :return: Nx2 array of box corner points
     """
 
-    box = np.array([[z - dz, -H / 2],
-                    [z, -H / 2],
+    box = np.array([[z, -H / 2],
+                    [z + dz, -H / 2],
+                    [z + dz,  H / 2],
                     [z,  H / 2],
-                    [z - dz,  H / 2],
-                    [z - dz, -H / 2]])  # close the box
+                    [z, -H / 2]])  # close the box
     return box
 
 def plot_bat_disp(zs, Ri, yi, phi_i, dz = 0.01, return_fig=False):
@@ -74,7 +74,7 @@ def plot_bat_disp(zs, Ri, yi, phi_i, dz = 0.01, return_fig=False):
         # Apply vertical shift to box coordinates
         box = box.copy()
         box[:, 1] += y
-        centre = (z - dz / 2, y)
+        centre = (z + dz / 2, y)
         box = rotate(box, phi, centre=centre)
         ax.plot(box[:, 0], box[:, 1], color = colors[0], alpha=0.3)
         ax.scatter(*centre, color = colors[1], s = 10)
@@ -171,7 +171,7 @@ def plot_bat(bat_sol, time_idx = 0, exaggerate=1.0, exaggerate_rotation=1.0, new
             top_left.append((box[0, 0], box[0, 1])) 
             ax.plot(box[:, 0], box[:, 1], color = colors[1], alpha=0.3)
             #scatter centre point
-            ax.scatter(bat_sol.zs[i] - bat_sol.dz/2, exaggerate * bat_sol.y_sol[i, time_idx], color='r', s=5)
+            ax.scatter(bat_sol.zs[i] + bat_sol.dz/2, exaggerate * bat_sol.y_sol[i, time_idx], color='r', s=5)
         ax.set_title(f'Bat Profile at Time Index {time_idx}')
         if new_fig:
             plt.show()
@@ -226,7 +226,7 @@ def animate_bat(bat_sol, exaggerate=1.0, exaggerate_rotation=1.0, interval=10, p
                     ax.plot(box[:, 0], box[:, 1], color=colors[2], alpha=1.0, linewidth=2, label = f'Impact Location')
                     ax.legend(loc = 'lower left')
 
-                ax.scatter(bat_sol.zs[i] - bat_sol.dz/2, y_val, color='r', s=5)
+                ax.scatter(bat_sol.zs[i] + bat_sol.dz/2, y_val, color='r', s=5)
             ax.set_title(title or f'Bat Profile at Time {bat_sol.t[t_idx]*1000:.2f} ms') #update to actually be value of t in ms
 
         ani = animation.FuncAnimation(fig, update, frames=num_frames, interval=50, repeat=False)
@@ -235,7 +235,6 @@ def animate_bat(bat_sol, exaggerate=1.0, exaggerate_rotation=1.0, interval=10, p
             ani.save(path, writer='ffmpeg', dpi=150)
         plt.show()
 #%% BALL PLOTTING FUNCTIONS
-
 def plot_ball_forces(ball, title = ''):
     """
     Plots the forces acting on the ball over time.
@@ -248,20 +247,27 @@ def plot_ball_forces(ball, title = ''):
     F1 = ball.k2 * u**ball.beta # expansion force
     F2 = ball.k1 * u**ball.alpha # compression
     fig, ax = plt.subplots(figsize=(6, 4))
-    ax.plot(u, F1, color=colors[0], label = r'$F_e = k_2 u^{\beta}$')
+    ax.plot(u, F1, color=colors[0], label = r'$F_e = k_e u^{\beta}$')
     plt.annotate(
     '',
     xy=(u[500], F1[500]),       # arrow head
     xytext=(u[495], F1[495]), # arrow tail
     arrowprops=dict(arrowstyle='<-', lw=2, mutation_scale=20, color = colors[0])
     )
-    ax.plot(u, F2, color=colors[1], label = r'$F_c = k_1 u^{\alpha}$')
+    ax.plot(u, F2, color=colors[1], label = r'$F_c = k_c u^{\alpha}$')
     plt.annotate(
     '',
     xy=(u[500], F2[500]),       # arrow head
     xytext=(u[505], F2[505]), # arrow tail
     arrowprops=dict(arrowstyle='<-', lw=2, mutation_scale=20, color = colors[1])
     )
+
+    ### fill area between F1 and F2 to show hysteresis
+    ax.fill_between(u, F1, F2, color=colors[2], alpha=0.1)
+    avg_F = (F1 + F2) / 2 # calculate average force for annotation
+    halfmaxu_idx = np.argmin(np.abs(u - 0.5*ball.max_u))
+    avg_F = avg_F[halfmaxu_idx] # get average force at max_u for annotation
+    ax.text(0.5*ball.max_u, avg_F, 'Energy Lost', color=colors[2], fontsize=10, ha='center', va='center', fontweight='bold')
     plt.scatter(ball.max_u, ball.max_F, color='r', label='Max Force Point', zorder=5)
     ax.set_xlabel(r'Deformation $u$ (m)')
     ax.set_ylabel(r'Force $F$ (N)')

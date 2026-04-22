@@ -7,6 +7,12 @@
 % Added for including graphics
 \usepackage{graphicx}
 
+\graphicspath{{plots/}}
+
+% Document-specific commands
+\newcommand{\ball}{_\mathrm{ball}}
+\newcommand{\coll}{_\mathrm{coll}}
+
 \begin{document}
 
 \title{The Torpedo Bat: Physics or a Fad?}
@@ -32,7 +38,7 @@
 
 \section{Introduction}
 %MOTIVATION
-The most crucial moment in baseball occurs within a millisecond, when a batter swings at a pitch and hopes to make contact with the ball. If he does, the resulting collision induces complex energy and force profiles. The ball then flies off the bat at a determined angle and exit velocity, which results in an out (or two), a hit, or a home run. Throughout the history of Major League Baseball (MLB), restrictions have been placed on the bat's length, diameter, and material. However, there is a significant degree of flexibility in the bat shape and at which longitude the bat reaches its maximum diameter \citep{zotero-item-662}.
+The most crucial moment in baseball occurs within a millisecond, when a batter swings at a pitch and hopes to make contact with the ball. If he does, the resulting collision induces complex energy and force profiles. The ball then flies off the bat at a determined angle and exit velocity, which results in an out (or two), a hit, or a home run. Throughout the history of Major League Baseball (MLB), restrictions have been placed on the bat's length, diameter, and material. However, there is a significant degree of flexibility in the bat shape and at which longitude the bat reaches its maximum diameter \citep{BaseballRules}.
 
 %TORPEDO
 In 2025, Aaron Leanhardt pioneered a new bat shape, dubbed the Torpedo bat, with the New York Yankees. The bat recentres mass about 17~cm (\(6\tfrac{1}{2}\)~inches) from the tip at the ``sweet spot" of the bat. Leanhardt's reasoning was that more mass behind the ball during the collision would yield higher exit velocities for batted balls. However, he predicted that the higher velocities would only hold for balls batted at the sweet spot, where the mass was refocused. %%% I actually don't know if that's what he thought, but that's what the media said
@@ -46,7 +52,7 @@ However, the key complication to our simulations is that the bat does not behave
 
 While we adopt the set of ordinary differential equations derived by Van Zandt and edited by Nathan, we also impose a set of boundary conditions to dictate how the knob and tip react to a collision. Clearly, the tip of the bat is free in a collision with the ball. However, the knob is held by the hands of the batter. \citet{crossSweetSpotBaseball1998} suggests that allowing the bat to be free on both ends is a sufficient approximation for the bat-ball collision. The timescales of the vibrations excited by the collision are much longer than the collision time. As a result, the wave in the bat does not reach the batters hands before the end of the collision. The motion of the bat on longer time scales is not the subject of interest for this paper, so it suffices to approximate the bat as free.
 
-To integrate the ordinary differential equations of interest, we take a different approach than \cite{nathanDynamicsBaseballBat2000a} and \cite{vanzandtDynamicalTheoryBaseball1992}. Previous solutions have been determined in the modal space, so they solve for the amplitudes of the normal modes. In our simulations, we take a direct approach and integrate for the displacements and shears of each slice of the bat.
+To integrate the ordinary differential equations of interest, we take a different approach than \cite{nathanDynamicsBaseballBat2000a} and \cite{vanzandtDynamicalTheoryBaseball1992}. Previous solutions have been determined in the modal space. In our simulations, we take a direct approach and integrate for the displacements and shears of each slice of the bat.
 
 %IN THIS PAPER....
 In this paper,
@@ -70,7 +76,7 @@ to maintain units of length. In total, our bat has $2N$ degrees of freedom.
 \end{figure}
 
 Crucially, each bat has a measured longitudinal profile $\{R_i\}$, where $R_i$ represents the cross-sectional radius of the $i$th slice of the bat. The batter's hands grasp the knob, or the $0$th slice of the bat. The $N$th slice is refered to as the tip. For a solid wooden bat, each slice has cross-sectional area $A_i = \pi R_i^2$ and moment of intertia $I_i = \pi R_i^4 / 4$ about the $z$-axis. Our examination also requires three observed parameters, Young's modulus $Y_i$, shear modulus $S_i$, and density $\rho_i$. A bat is required to be constructed from a singe wooden
-piece \citep{zotero-item-662}, so we take the reasonable approximation that these parameters are uniform. Henceforth, the subscripts are dropped, and we refer to these parameters as $Y,
+piece \citep{BaseballRules}, so we take the reasonable approximation that these parameters are uniform. Henceforth, the subscripts are dropped, and we refer to these parameters as $Y,
 	S,\rho$.
 
 The set of oridinary differential equations are presented here without justification. \citet{vanzandtDynamicalTheoryBaseball1992} thoroughly outlines his derivations of the motions of the bat, which are further improved upon by \citet{nathanDynamicsBaseballBat2000a}. In accordance with their work, each bat slice $i$ with displacement $y_i$ and shear $\Phi_i$ oscillates freely as
@@ -117,7 +123,7 @@ Nathan and Van Zandt integrate for $a_n(t)$, $\dot{a}_n(t)$ in their investigati
 In the case that a bat is impacted by a force, we introduce a term in the right hand side of Equation \ref{eq:matrixeq}. We let the bat be impacted at a single slice, although it is straightforward to generalize to the multi-slice case. For a bat impacted at slice $k$ with force $F_k(t)$,
 
 \begin{equation}\label{eq:batforce}
-	\ddot{\vec{\psi}} = \mathbf{H} \vec{\psi} + \vec{F}(t)
+	\ddot{\vec{\psi}} = \mathbf{H} \vec{\psi} + \mathbf{M^{-1}}\vec{F}(t)
 \end{equation}
 where
 \begin{equation}
@@ -125,85 +131,215 @@ where
 		0 \\ \vdots \\ F_k(t) \\ \vdots\\ 0 \\
 	\end{bmatrix}.
 \end{equation}
-The vector $\vec{F}(t)$ is zero except for the $k$th term, which contains the force magnitude. Equation \ref{eq:batforce} governs the dynamics for the bat in a collision with the ball.
+The vector $\vec{F}(t)$ is zero except for the $k$th term, which contains the force magnitude. The matrix $\mathbf{M}$ is the mass matrix for the bat. It is a diagonal matrix with
+
+\begin{equation}
+	M_{ii} =
+	\begin{cases}
+		\rho A_i dz         & 1 \leq i \leq N  \\
+		\frac{\rho I_i}{dz} & N \leq i \leq 2N
+	\end{cases}.
+\end{equation}
 
 \subsection{The Ball}
-
 The ball is significantly inelastic, so quantifying its force on the bat requires prior knowledge of energy-loss parameters. We use the coefficient of restitution (COR) $e_0$, which parametrizes the energy lost in a collision with an immovable rigid body. If the ball impacts such a body with speed $v_i$ and exits with speed $v_f$, then $e_0$ represents the ratio
 
 \begin{eqnarray}\label{eq:e0}
 	e_0 = \frac{v_f}{v_i}.
 \end{eqnarray}
 
-The energy dissipated in the collision is then
+Values of $e_0$ for a baseball are typically around $e_0 \approx 0.5$.
+The energy dissipated in the collision is
 
 \begin{equation}
 	E_{\mathrm{lost}} \propto v_i^2 - v_f^2 \propto 1 - e_{0}^2.
 \end{equation}
 
-The ball compresses and expands in response to a force. So, in accordance with \citet{crossImpactBallBat1999}, we model the ball as a nonlinear spring. We define the ball's compression as $u$, measured with respect to its natural radius $R_b$. We also define $y_b$ to be the position of the ball's centre of mass. We assume the ball compresses symmetrically during a collision.
+The ball compresses and expands in response to a force. So, in accordance with \citet{crossImpactBallBat1999}, we model the ball as a nonlinear spring. We define the ball's compression as $u$, measured with respect to its natural radius $R\ball$. We also define $y\ball$ to be the position of the ball's centre of mass. We assume the ball compresses symmetrically during a collision.
 
-Since the ball is inelastic, it compresses and expands along two different force profiles, $F_c$ and $F_e$. Then, the energy lost is
+Since the ball is inelastic, it compresses and expands along two different force profiles, $F_c$ and $F_e$. Together, they form the closed loop $F(u)$. Then, the energy lost is
 
 \begin{equation}\label{eq:elost}
-	E_{\mathrm{lost}} = \oint F(u) du \propto 1 - e_0^2
+	E_{\mathrm{lost}} = \oint F(u) du \propto 1 - e_0^2.
 \end{equation}
 The ball compresses according to
-
 \begin{equation}
-	F_c = k_c x^\alpha.
+	F_c = k_c u^\alpha.
 \end{equation}
-
-Clearly, $\alpha = 2$ would result in an elastic spring. $\alpha$ is determined experimentally, and has a typical value of $\approx 1.5$ for a baseball. $k_c$ represents the stiffness of the ball, with typical values for a baseball on the order of $10^7$~N/m$^\alpha$. Similarly, the ball expands along
-
+Clearly, $\alpha = 2$ would result in an elastic spring. The value of $\alpha$ is determined experimentally, and has a typical value of $\approx 1.5$ for a baseball. $k_c$ represents the stiffness of the ball, with typical values for a baseball on the order of $10^7$~N/m$^\alpha$. Similarly, the ball expands along
 \begin{equation}
-	F_e = k_e x^\beta.
+	F_e = k_e u^\beta.
 \end{equation}
-
 To preserve the relationship in Equation \ref{eq:elost},
 \begin{equation}
 	\beta = \frac{1 + \alpha}{e_0^2} - 1.
 \end{equation}
-
 Lastly, $k_e$ is evaluated to preserve continuity at the maximum compression $u_\mathrm{max}$
-
-\begin{equation}
+\begin{equation}\label{eq:k_e}
 	k_e = k_c u_\mathrm{max}^{\alpha / \beta}.
 \end{equation}
 
 
-The resulting hysterisis curve defines the force exerted on a bat slice during a collision. The ball begins with $u = 0$, $\dot{u} > 0$, and $F_k(t) = F_c(u)$ while the ball is squishing against the bat. The ball stops compressing when $\dot{u} = 0$, and the force switches to $F_k(t) = F_e(u)$. When $u = 0$, $\dot{u} < 0$, the ball returns to its natural radius and $F_k(t) = 0$. 
+The resulting hysteresis curve defines the force exerted on a bat slice during a collision. The ball begins with $u = 0$, $\dot{u} > 0$, and $F_k(t) = F_c(u)$ while the ball is squishing against the bat. The ball stops compressing when $\dot{u} = 0$, and the force switches to $F_k(t) = F_e(u)$. When $u = 0$, $\dot{u} < 0$, the ball returns to its natural radius and $F_k(t) = 0$.
 We define the collision time $t_{\mathrm{coll}}$ as the time at which the force
 decays to $1\%$ of the maximum impact force. Note the collision time is distinct from the time the ball and the bat separate. Since the impacted slice displaces, the force goes to $0$ while the bat and ball are still in contact.
-\section{Results}
-
-
-\subsection{Eigenvectors and Values of \texorpdfstring{$\mathbf{H}$}{H}}
-
-\begin{table}[htbp]
+\begin{figure}[h]
 	\centering
-	\begin{tabular}{|r|c|c|c|c|}
-		\hline
-		\multicolumn{1}{|c|}{} & \multicolumn{2}{c|}{\textbf{Standard}} & \multicolumn{2}{c|}{\textbf{Torpedo}}                                                                                              \\
-		\hline
-		\textbf{Mode} ($n$)    & Eigenvalue $-(\omega_n^{(s)}) ^2$      & $f_n^{(s)} = \frac{\omega_n^{(s)}}{2\pi}$ (Hz) & Eigenvalue $-(\omega_n^{(s)})^2$ & $f_n^{(T)} = \frac{\omega_n^{(T)}}{2\pi}$ (Hz) \\[1.5ex]
-		\hline
-		Rigid                  & $2.65\times 10^{-5}$                   & N/A                                            & $7.75\times 10^{-5}$             & N/A                                            \\
-		Rigid                  & $-1.97\times 10^{-5}$                  & N/A                                            & $-3.43\times 10^{-6}$            & N/A                                            \\
-		1                      & $-1.17 \times 10^{6}$                  & $172.38$                                       & $-8.39\times 10^5$               & $ 145.77$                                      \\
-		2                      & $-1.30 \times 10^7$                    & $574.29$                                       & $-1.04 \times 10^7$              & $ 515.04$                                      \\
-		3                      & $-5.48\times 10^7$                     & $1178.63$                                      & $-4.43 \times 10^7$              & $1059.49$                                      \\
-		4                      & $-1.35\times 10^8$                     & $1847.03$                                      & $-1.08\times 10^8$               & $1656.70$                                      \\
-		5                      & $-2.62\times 10^8$                     & $2577.47$                                      & $-2.11\times 10^8$               & $2309.65$                                      \\
-		\hline
-	\end{tabular}
-	\caption{Lowest normal-mode eigenvalues and frequencies for the standard and Torpedo bats. Columns list mode index $n$, eigenvalue $-(\omega_n)^2$, and corresponding frequency $f_n = \omega_n/(2\pi)$ for each bat, and the first two rows are rigid-body modes with near-zero frequency. Both bats share the same qualitative modal structure, while the Torpedo bat exhibits slightly lower frequencies for the first elastic modes.}
-	\label{tab:eigvals}
+
+	\includegraphics[width = 0.6\textwidth]{hysteresis_curve.png}
+	\caption{Sample hysteresis curve typical of a baseball. The curve shows the force on the ball at a given compression. The green line gives the force for a compressing ball and the yellow line gives the force for an expanding ball. The two curves are continuous at the maximum force displayed as a red dot. The area between both curves is the energy lost in the collision, which constitutes a significant fraction of the initial energy.}
+	\label{fig:hysteresis}
+\end{figure}
+
+The ball's equation of motion is then
+\begin{equation}
+	\ddot{y}\ball = - \frac{1}{m\ball}F(u(t)),
+\end{equation}
+since the force is negative pushing away from the bat.
+\subsection{Bat and Ball Coupling}
+
+We have independently determined the equations of motion for both the bat and the ball. They are coupled through the ball's compression, which is the difference between the ball's natural radius and the space between the ball's centre of mass $y\ball$ and the slice position $y_k$. For an impact on the $k$th slice of the bat, the complete system is as follows:
+\begin{align}
+	\ddot{\vec{\psi}} & = \mathbf{H} \vec{\psi} + \mathbf{M}^{-1} \vec{F}(t) \\
+	\ddot{y}\ball     & = - \frac{1}{m\ball}F_k(u(t))                        \\
+	u(t)              & = R\ball - (y\ball(t) - y_k(t))
+\end{align}
+
+We set the bat to be initially at rest, $\vec{\psi} = 0$. The ball begins in contact with the bat at $u = 0$, $y\ball = R\ball$. Note that
+
+\begin{equation}
+	\dot{u}(t) = - \dot{y}\ball(t) - \dot{y}_k(t),
+\end{equation}
+which is required to determine the relevant force at a given time.
+
+
+\subsection{Rigid Expectation}
+We compare our results with the non-rigid bat model to the rigid expectation. \cite{nathanCharacterizingPerformanceBaseball2003} outlines the process for obtaining the rigid body expectation for the bat-ball collision. For a free bat, conservation of momentum assigns the bat an effective mass
+\begin{equation}\label{eq:meff}
+	\frac{1}{M_\mathrm{eff}} = \frac{1}{M} + \frac{(z - z_\mathrm{cm})^2}{I_\mathrm{cm}} 
+\end{equation}
+
+which accounts for both translation and rotation. Equation~\ref{eq:meff} takes $M$ as the bat's actual mass, $z$ as the impact location, $z_\mathrm{cm}$ as the bat's centre of mass, and $I_\mathrm{cm}$ as the moment of inertia about the bat's centre of mass. We define the bat recoil factor $r$ according to
+\begin{equation}
+	r = \frac{m\ball}{M}.
+\end{equation}
+
+The bat-ball coefficient of restitution $e$ (BBCOR) describes the difference between simulated $v_f/v_i$ and the rigid bat expectation. It is given by 
+\begin{equation}
+	e = \left(\frac{v_f}{v_i}\right)(1 + r) + r.
+\end{equation}
+BBCOR $e$ is a property of both the bat and the ball, unlike $e_0$ which only accounts for the ball. As such, $e$ is a better diagnostic for the efficiency of a collision.
+
+
+
+
+
+
+
+
+\section{Simulation Set Up}\label{sec:simsetup}
+Our main simulation compares the exit velocities of batted balls for both the standard and Torpedo bats as a function of longitudinal impact location. The bats differ in shape, and all other parameters are roughly equal within their orders of magnitude. The shapes are plotted in Figure~\ref{fig:staticbat}. Our chosen parameters reflect true measurements of bat stiffness, shape, and mass by experimentalists like Cross. The ball parameters and impact speed are constant across all impacts. Our complete process is as follows:
+
+\begin{enumerate}
+	\item Take the parameters for each bat outlined in Table~\ref{tab:batparams}.
+	      \begin{table}[h]
+		      \centering
+		      \begin{tabular}{|lrr|l|} \toprule     & \textbf{Standard} & \textbf{Torpedo} & \textbf{Units}           \\ \hline
+               Bat Length             & $86 $             & $86$             & cm                       \\
+               mass                   & $890.175$         & $908.319$        & g                        \\
+               Mass Density ($\rho$)  & $690$             & $690$            & kg $/$ m$^3$             \\
+               Young's Modulus ($Y$)  & $1.64$            & $1.65$           & $\times 10^{10}$ N $/$ m \\
+               Shear Modulus ($S$)    & $10$              & $9$              & $\times 10^{8}$ N $/ $ m \\
+               Slice Thickness ($dz$) & $0.01$            & $0.01$           & m                        \\
+               Number of Slices ($N$) & $ 86$             & $86$             &                          \\\hline
+		      \end{tabular}
+		      \caption{Parameters taken for the standard and Torpedo bats across our simulations. Parameters are based on real bat measurements of MLB legal bats. The bats are roughly the same in all parameters except for their shape.}
+		      \label{tab:batparams}
+	      \end{table}
+	\item Take the parameters for the ball outlined in Table~\ref{tab:ballparams}. Note the expansion stiffness $k_e$ is not constant acrosss the collisions. The value of $k_e$ is independently determined during each simulation when the ball reaches maximum compression $u_\mathrm{max}$ to ensure continuity of the hysteresis curve.
+	      \begin{table}[h]
+		      \centering
+		      \begin{tabular}{|lr|l|} \toprule \textbf{Parameter} & \textbf{Value} & \textbf{Unit} \\\hline  Mass ($m\ball$) & $146$ & g
+               \\ Natural Radius ($R\ball$) & $3.6600$ & cm                \\
+               COR ($e_0$)                          & $0.5$          & dimensionless \\ Compression Stiffness ($k_c$) & $7.14$ & $\times 10^6$ N $/$ m$^\alpha$
+               \\ Compression Non-Linearity ($\alpha$) & 1.36 & dimensionless \\ Expansion Non-Linearity $(\beta)$ & 8.44 & dimensionless \\\hline\end{tabular}
+		      \caption{<caption>}
+		      \label{tab:ballparams}
+	      \end{table}
+	\item Select the impact index $k$.
+	\item Initialize the ball and bat to the initial conditions below. We take $v_i = 44.704$~$\mathrm{m}/\mathrm{s} = 100$ mph, which is a high but not anomalous MLB pitch     velocity.
+	      \begin{align}\label{eq:inits}
+		      \vec{\psi}(t = 0) & = 0      & \dot{\vec{\psi}}(t = 0) & = 0 \\
+		      y\ball (t = 0)    & = R\ball & u(t = 0)                & = 0 \\
+		      \dot{y}\ball\,    & = v_i
+	      \end{align}
+	\item Use RK45 to integrate the collision for $2$~ms with a timestep $h = 2\mu$s. After each step, check the most recent values of $\dot{u}$ and $u$ to determine the relevant force profile $F_k(t)$.
+	      \begin{enumerate}
+		      \item When $\dot{u} = 0$ and $u > 0$, then the force profile switches from $F_c \to F_e$. Store the maximum compression and force values. Calculate the expansion stiffness $k_e$ according to Equation~\ref{eq:k_e}.
+		      \item When $F_e$ is less than $1\%$ of $F_\mathrm{max}$, store the corresponding time as $t_\mathrm{collision}$.
+		      \item When $\dot{u} < 0$ and $u = 0$, let $F_k \to 0$. Store current value of $|\dot{y}\ball|$ as the exit velocity $v_f$.
+	      \end{enumerate}
+	\item After the bat and ball separate, the ball flies with constant velocity $v_f$ and the bat oscillates freely.
+	\item Reset the bat and ball solutions. Repeat steps 3-6 for $50 \leq k < N$ across the barrel of the bat.
+\end{enumerate}
+
+
+
+
+
+
+
+\section{Results}
+\subsection{Modal Analysis}
+Before we perform the simulations outlined in Section~\ref{sec:simsetup}, we first analyze the normal modes and frequencies of the bats. The normal modes encode significant geometrical features of each bat. Understanding the location of the nodes of each mode informs why the ball's exit velocity changes as a function of impact location. Table~\ref{tab:eig} contains the 6 lowest normal frequencies for both bats. The Torpedo frequencies shift slightly higher than the standard frequencies. This shift corresponds to marginally shorter timescales for the Torpedo bat's ocsillations.
+
+\begin{table}[h]
+	\centering
+\begin{tabular}{|l||p{2cm}p{1.8cm}|p{2cm}p{1.8cm
+	}|} \toprule \textbf{Mode} & \textbf{Standard Frequency} (Hz) & \textbf{Standard Period} (ms) & \textbf{Torpedo} \textbf{Frequency} (Hz)  & \textbf{Torpedo Period} (ms) \\ \hline Mode 1 &
+	141.88 & 7.05 & 143.14 & 6.99 \\ Mode 2 & 505.36 & 1.98 & 509.16 & 1.96 \\ Mode
+	3 & 1036.55 & 0.96 & 1050.91 & 0.95 \\ Mode 4 & 1625.55 & 0.62 & 1645.98 & 0.61
+	\\ Mode 5 & 2296.50 & 0.44 & 2296.55 & 0.44 \\ Mode 6 & 3010.61 & 0.33 & 2979.
+	03 & 0.34 \\ \hline \end{tabular}
+	\caption{Caption}
+	\label{tab:eig}
 \end{table}
 
 
+We also plot the normal mode shapes for both bats in Figure~\ref{fig:modes}. The modes barely differ between the standard and Torpedo bats. However, the modes for the Torpedo bat fall slightly inside the standard bat modes along the barrel, with $z \geq 0.5$m. For both bats, the first mode has a node at $z=0.68$~cm, or $6.7$ inches from the tip of the bat. The second mode has a node at $z = 0.75$~cm, or $5.1$ inches from the tip of both bats.  Since the first two modes contain timescales longer than our collision, we expect they will constitute the majority of our vibrations. If the ball hits a node, the corresponding mode will not be excited in the collision. So, we expect collisions on the bats between $z = 0.68$~cm and $z = 0.75$~cm to transfer the least amount of energy to bat vibrations, and hence more energy will be transfered to the ball.
+\begin{figure}[h]
+	\centering
+	\includegraphics[width = 0.7\textwidth]{mode_shapes.pdf}
+	\caption{Mode Shapes}
+	\label{fig:modes}
+\end{figure}
 
 
+\subsection{Exit Velocities}
+After running our simulations, we examine the fraction $v_i/v_f$ for the ball over each collision. We formally define the sweet spot as the region where $v_f/v_i$ is greater than the combined 80th percentile limit over all exit velocities (including both bats). For our simulations, the sweet spot is where $v_f / v_i \geq 
+0.22$. 
+
+The results our simulation are shown in Figure~\ref{fig:vf_vi}. We notice that the curve for the Torpedo bat is shifted inwards on the bat (closer to the knob) compared to the standard bat. We also notice the Torpedo bat yields marginally higher exit velocities, especially at the sweet spot. As expected, the range for $v_f/v_i < e_0 = 0.5$, because some of the initial kinetic energy of the ball is transfered to the bat's rigid motion and its vibrations. 
+
+\begin{figure}[h]
+	\centering
+	\includegraphics*[width = 0.8\textwidth]{final_velocity_comparison.pdf}
+	\caption{Final velocities for both bats}
+	\label{fig:vf_vi}
+\end{figure}
+
+Interestingly, the sweet spot of the Torpedo bat is wider than the sweet spot of the standard bat by 1 cm or 0.4 inches. The sweet spot for the standard bat ranges from $5.91 - 8.26$ inches from the tip, while the sweet spot for the Torpedo bat ranges from $5.91 - 8.66$ inches from the tip. So, both sweet spots start at the same location on the outside of the bat, but the Torpedo has a higher production value as the collisions progress towards the knob. 
+
+\subsection{Compression and Force}
+
+We now examine the maximum force induced between the bat and ball across all collision locations. A plot of these findings is shown in Figure~\ref{fig:force}. For both bats, the maximum force rises sharply as the impact location moves from the tip to the knob. Both bats have the maximum induced force on the outside (leftmost) edge of their sweet spot, before steadily declining along the barrel. In the sweet spot and towards the barrel, the maximum force induced on the Torpedo bat is higher than the standard. Near the tip, the standard bat experiences a higher maximum force compared to the Torpedo.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width = 0.8\textwidth]{max_force_comparison.pdf}
+	\caption{Compression and force}
+	\label{fig:force}
+\end{figure}
 
 \section{Discussion}
 
@@ -310,49 +446,6 @@ decays to $1\%$ of the maximum impact force. Note the collision time is distinct
 	\caption{Boundary (knob and tip) coefficient definitions for the system matrix $\mathbf{H}$. Entries list nonzero matrix elements for boundary rows in each quadrant, replacing interior formulas where free-end conditions modify the coefficients. These boundary corrections are essential to enforce physically consistent free-end force and torque behavior in the discretized bat model.}
 	\label{tab:Hboundary}
 \end{table}
-
-\begin{table}[htbp]
-	\centering
-	\begin{tabular}{|r|c|c|c|c|l|}
-		\hline
-		\multicolumn{1}{|c|}{} & \multicolumn{2}{c|}{\textbf{Simulation 1}} & \multicolumn{2}{c|}{\textbf{Simulation 2}} & \multicolumn{1}{c|}{}                                               \\
-		\hline
-		Property               & \textbf{Standard Bat}                      & \textbf{Torpedo Bat}                       & \textbf{Standard}     & \textbf{Torpedo} & Units                    \\
-		\hline
-		Bat Length             & 0.84                                       & 0.85                                       & 0.84                  & 0.84             & m                        \\
-		Density $\rho$         & 649                                        & 690                                        & 690                   & 690              & kg/m$^3$                 \\
-		Shear Modulus $S$      & 1.05                                       & 0.9                                        & 1.0                   & 0.9              & $\times 10^{9}$ N/m$^2$  \\
-		Young's Modulus $Y$    & 1.814                                      & 1.650                                      & 1.64                  & 1.65             & $\times 10^{10}$ N/m$^2$ \\
-		\hline \hline
-		Slice Width $dz$       & 0.01                                       & 0.01                                       & 0.01                  & 0.01             & m                        \\
-		Num. Slices $N$        & 84                                         & 85                                         & 85                    & 85               & slices                   \\
-		\hline
-	\end{tabular}
-	\caption{Input bat properties used across the two collision simulations. Columns report standard and Torpedo values for Simulation 1 and Simulation 2, while rows list geometric and material parameters ($L$, $\rho$, $S$, $Y$, $dz$, and $N$). Simulation 1 compares realistic but materially different bats, whereas Simulation 2 controls density and stiffness to isolate the effect of bat shape.}
-	\label{tab:batprops}
-\end{table}
-
-
-\begin{table}[htbp]
-	\centering
-	\begin{tabular}{|r|ccc|}
-		\hline
-		\textbf{Parameter}         & \textbf{Symbol} & \textbf{Value}       & \textbf{Unit}  \\
-		\hline
-		Mass                       & $m_b$           & 0.146                & kg             \\
-		Radius                     & $R_b$           & 0.0366               & m              \\
-		Initial Velocity           & $v_{b,0}$       & 44.704               & m/s            \\
-		Coefficient of Restitution & $e_0$           & 0.50                 & dimensionless  \\
-		Compression Constant       & $k_1$           & $0.714\times 10^{7}$ & N/m$^{\alpha}$ \\
-		Compression Exponent       & $\alpha$        & 1.36                 & dimensionless  \\
-		\hline
-	\end{tabular}
-	\caption{Baseball model parameters used in all integrations. Rows list mass, radius, initial relative impact speed, coefficient of restitution $e_0$, compression constant $k_1$, and compression exponent $\alpha$ for the nonlinear lossy-spring ball model. These fixed ball parameters define the compression-expansion force law and allow direct comparison of bat-dependent outcomes.}
-	\label{tab:ball}
-\end{table}
-
-
-
 
 \begin{acknowledgments}
 

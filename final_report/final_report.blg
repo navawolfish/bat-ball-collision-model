@@ -3,7 +3,6 @@ Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
 The top-level auxiliary file: final_report.aux
 The style file: aasjournalv7.bst
 Database file #1: references.bib
-Warning--I didn't find a database entry for "zotero-item-662"
 Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
 Warning--empty year in felippaIntroductionFiniteElement; set to ????
 Warning--empty journal in felippaIntroductionFiniteElement
@@ -11,7 +10,7 @@ Warning--empty year in nathanDynamicModelBallBat; set to ????
 Warning--empty journal in nathanDynamicModelBallBat
 You've used 12 entries,
             3389 wiz_defined-function locations,
-            778 strings with 6860 characters,
+            777 strings with 6845 characters,
 and the built_in function-call counts, 4466 in all, are:
 = -- 425
 > -- 164
@@ -50,4 +49,4 @@ warning$ -- 4
 while$ -- 43
 width$ -- 0
 write$ -- 136
-(There were 5 warnings)
+(There were 4 warnings)

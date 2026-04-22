@@ -58,3 +58,7 @@ midterm_report/
 !midterm_report/plots/
 !midterm_report/plots/*.pdf
 #add back pdf
+
+#final report
+final_report/
+!final_report/*.pdf
