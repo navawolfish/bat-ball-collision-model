@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os 
 import tqdm
 from scipy.sparse import diags
+from scipy.linalg import eigh
 import pandas as pd
 
 def load_H_matrix(file_path, N = 84):
@@ -215,27 +216,6 @@ def create_system_matrices(N, Ai, Ii, dz, S, Y, rho, path = ''):
 
 
 #### EIGENMODES AND EIGENFREQUENCIES
-def compute_eigenfrequencies(H, num_modes=10):
-    """Compute eigenvalues, eigenvectors, and frequencies from system matrix H.
-    
-    :param H: system matrix (2N x 2N)
-    :param num_modes: number of modes to return (sorted by eigenvalue descending)
-    :return: DataFrame with columns ['eigenvalue', 'frequency_Hz', 'eigenvector'],
-             sorted by eigenvalue descending
-    """
-    evals, evecs = np.linalg.eig(H)
-
-    eig_df = pd.DataFrame({
-        'eigenvalue': evals,
-        'frequency_Hz': np.where(evals.real < 0, np.sqrt(-evals.real) / (2 * np.pi), 0),
-        'eigenvector': list(evecs.T)
-    })
-
-    eig_df.sort_values('eigenvalue', ascending=False, inplace=True)
-    eig_df.reset_index(drop=True, inplace=True)
-    return eig_df
-
-
 def find_mode_nodes(eig_df, zs, N, num_modes=10):
     """Find nodal positions (zero crossings) for each mode shape.
     
@@ -430,4 +410,3 @@ if __name__ == "__main__":
     # Print the system matrix
     print("System Matrix H:")
     print(H)
-# %%

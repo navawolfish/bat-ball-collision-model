@@ -7,6 +7,7 @@ from scipy.interpolate import interp1d
 import pickle
 import json
 from .integrators import new_bat_ode, bat_ode_with_ball, _event_ball_max_comp, _event_separation
+from .eigenstuff import *
 #%% ALL ATTRIBUTES
 #running list of all attributes for BatOsc and Ball
 ball_attr = ['mass', #ball mass in kg
@@ -43,13 +44,19 @@ bat_attr = ['bat_prof', #bat profile, 2D array with columns [z, radius]
              'M', #mass matrix
              'M_inv_diag', #inverse diagonal of mass matrix
              'H', #system matrix
+             'K', #stiffness matrix
+             'freqs', #normal frequencies, shape (num_modes,)
+             'modes', #normal modes, shape (2N, num_modes)
+             'abar', #area norm for modal analysis, scalar
              #AFTER INTEGRATION
              'inits', #initial conditions (array of length 4N: [y0 (N), phi0 (N), dy0 (N), dphi0 (N)])
              'y_sol', #solution for y displacements (array of shape N x len(t))
+             'ydot_sol', #solution for y velocities (array of shape N x len(t))
              'phi_sol', #solution for phi angles (array of shape N x len(t))
+             'phidot_sol', #solution for phi velocities (array of shape N x len(t))
              't' #time vector
              ] 
-bat_attr_postint = bat_attr[12:] #attributes that are only defined after integration (dynamic attributes)
+bat_attr_postint = bat_attr[-5:] #attributes that are only defined after integration (dynamic attributes)
 
 #%% helper functions
 def F_quad(u, k, alpha):
@@ -59,6 +66,11 @@ def F_quad(u, k, alpha):
     return k * u**alpha
 
 def get_0_F(F, u, threshold = 1e-7):
+    """" 
+    Helper function to find the index where the ball force drops back to zero (separation). Because of numerical issues, we look for when the force drops below a small threshold after the point of maximum compression.
+    
+    
+    """
     max_comp_idx = np.argmax(u)
     F_exp = F[max_comp_idx:]
     zero_crossings = np.where(np.abs(F_exp) < threshold)[0]
@@ -121,7 +133,7 @@ class BatOsc:
         Ii = (np.pi / 4) * (self.radii)**4
         self.M = np.diag(np.concatenate([Ai*rho * self.dz, Ii * rho / self.dz]))
         self.M_inv_diag = 1.0 / np.diag(self.M)  # precompute for ODE speed
-
+        return
     
     def get_H_matrix(self, H_matrix=None):
         """
@@ -140,6 +152,18 @@ class BatOsc:
                                    S = self.S,
                                    Y = self.Y,
                                    rho = self.rho)
+        #compute K
+        self.K = self.M @ self.H
+        return
+
+    def get_modes(self):
+        if not hasattr(self, 'K') or not hasattr(self, 'M'):
+            raise ValueError("K and M matrices must be set before computing modes. Call get_H_matrix() and set_bat_features() first.")
+        
+        eig_df = compute_eigenfrequencies(self.K, self.M)
+        self.freqs = eig_df['frequency_Hz']
+        self.modes = np.stack(eig_df['eigenvector'].values, axis=1)  # (2N, 10)
+        self.Abar = get_Abar(self) #area norm
         return
 
     def validate(self, require_inits=True, require_ball=False, impact_idx=None):
@@ -155,6 +179,8 @@ class BatOsc:
             errors.append("Material features not set — call set_bat_features(mass, rho, Y, S).")
         if not hasattr(self, 'H'):
             errors.append("System matrix H not built — call get_H_matrix().")
+        if not hasattr(self, 'K'):
+            errors.append("System matrix K not built — call get_H_matrix().")
         if require_inits and not hasattr(self, 'inits'):
             errors.append("Initial conditions not set — call set_initial_conditions(state_vec).")
         if require_ball and not hasattr(self, 'ball'):
@@ -312,8 +338,7 @@ class BatOsc:
                 if verbose:
                     print(f"Ball separates at t = {t_separation*1e3:.3f} ms, "
                           f"ball exit v = {x_at_sep[4*N+1]:.2f} m/s")
-
-
+                
                 # --- Phase 3: free vibration (no ball) ---
                 if t_separation < t_span[1]:
                     if continue_free_vibration:
@@ -379,6 +404,8 @@ class BatOsc:
         # Store results
         self.y_sol = y_full[0:N, :]
         self.phi_sol = y_full[N:2*N, :]
+        self.ydot_sol = y_full[2*N:3*N, :]
+        self.phidot_sol = y_full[3*N:4*N, :]
         self.t = t_full
         
         #now store ball results as well
@@ -411,6 +438,8 @@ class BatOsc:
             't': t_full,
             'y_sol': y_full[0:N, :],
             'phi_sol': y_full[N:2*N, :],
+            'ydot_sol': y_full[2*N:3*N, :],
+            'phidot_sol': y_full[3*N:4*N, :],
             'yb': y_full[4*N, :],
             'yb_dot': y_full[4*N+1, :],
             'max_u': max_u,
@@ -543,7 +572,7 @@ class Ball:
 
 #%% LOADING FUNCTIONS from json and pkl
 def bat_from_json(filename):
-    """Loads bat parameters and solution from a JSON file and returns a BatOsc instance. Does not include solution data, initial conditions, or H matrix"""
+    """Loads bat parameters from a JSON file and returns a BatOsc instance with H matrix and modes computed."""
     with open(filename, 'r') as f:
         data = json.load(f)
     if 'profile_file' in data.keys():
@@ -570,8 +599,11 @@ def bat_from_json(filename):
             raise ValueError(f"Failed to load bat profile from '{resolved_profile_path}': {e}")
     else:
         raise ValueError("JSON must contain either 'profile_file' or 'bat_prof' key with the bat profile data.")
+    
     bat = BatOsc(data['bat_prof'], data['dz'])
     bat.set_bat_features(data['mass'], data['rho'], data['Y'], data['S'])
+    bat.get_H_matrix()
+    bat.get_modes()
     return bat
 
 
@@ -649,3 +681,5 @@ def bat_from_pkl(filename, solution = False):
             if attr in ball_data:
                 setattr(ball, attr, ball_data[attr])
         bat.ball = ball
+
+# %%

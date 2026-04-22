@@ -1,0 +1,365 @@
+%% AASTeX v7 Template
+\documentclass[linenumbers]{aastex7}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{circuitikz}
+
+% Added for including graphics
+\usepackage{graphicx}
+
+\begin{document}
+
+\title{The Torpedo Bat: Physics or a Fad?}
+
+\author{Nava Wolfish}
+\affiliation{University of Toronto}
+\email{nava.wolfish@mail.utoronto.ca}
+
+
+\author{Alan M. Nathan}
+\affiliation{University of Illinois, Urbana-Champaign}
+\email{a-nathan@illinois.edu}
+
+\author{Erica Rosenblum}
+\affiliation{University of Toronto}
+\email{erica.rosenblum@utoronto.ca}
+\begin{abstract}
+
+
+\end{abstract}
+
+\keywords{}
+
+\section{Introduction}
+%MOTIVATION
+The most crucial moment in baseball occurs within a millisecond, when a batter swings at a pitch and hopes to make contact with the ball. If he does, the resulting collision induces complex energy and force profiles. The ball then flies off the bat at a determined angle and exit velocity, which results in an out (or two), a hit, or a home run. Throughout the history of Major League Baseball (MLB), restrictions have been placed on the bat's length, diameter, and material. However, there is a significant degree of flexibility in the bat shape and at which longitude the bat reaches its maximum diameter \citep{zotero-item-662}.
+
+%TORPEDO
+In 2025, Aaron Leanhardt pioneered a new bat shape, dubbed the Torpedo bat, with the New York Yankees. The bat recentres mass about 17~cm (\(6\tfrac{1}{2}\)~inches) from the tip at the ``sweet spot" of the bat. Leanhardt's reasoning was that more mass behind the ball during the collision would yield higher exit velocities for batted balls. However, he predicted that the higher velocities would only hold for balls batted at the sweet spot, where the mass was refocused. %%% I actually don't know if that's what he thought, but that's what the media said
+In this examination, we determine if Leanhardt's hypothesis holds for the Torpedo bat using first-principles physics simulations. More broadly, we analyze if bat shape has a meaningful effect on batted ball results.
+
+%THE LARGEST CONTRIBUTIONS TO RESEARCH
+However, the key complication to our simulations is that the bat does not behave as a rigid body. It oscillates in response to a force according to the bat's stiffness, density, and shape. These oscillations are first described by \citet{vanzandtDynamicalTheoryBaseball1992}. Van Zandt discretizes the bat along its axis of symmetry into slices. Next, he derives expressions for the shear and normal forces on each slice imposed by its neighbours from first principles physics. His method closely resembles the Finite Element Method, and his equations of motion are consistent with the Timoshenko equation for a non-uniform elastic beam \citep{reddyIntroductionFiniteElement1993}.
+
+%NATHAN
+\cite{nathanDynamicsBaseballBat2000a} builds upon Van Zandt by including a model for the ball that accounts for energy loss in the collision. Nathan suggests the ball be described as an inelastic spring, whose energy loss is parametrized by a hysteresis curves. He is able to recreate controlled lab collision results for the exit velocity of a batted ball. Nathan analyzes the fractional energy contained within the bat, ball and the energy lost for a given set of collision parameters. Furthermore, he decomposes the bat's fractional energy into the energy contained in the bat's rigid motion and each of its normal modes. He finds that overwhelmingly, energy from the collision is lost due to imperfections in the ball. However, the energy contained within bat vibrations has a steep minimum near the sweet spot of the bat, roughly 16 cm (\(6\tfrac{1}{4}\) inches) from the tip. The location of the minimum accurately suggests a higher exit velocity for a batted ball near the sweet spot.
+
+While we adopt the set of ordinary differential equations derived by Van Zandt and edited by Nathan, we also impose a set of boundary conditions to dictate how the knob and tip react to a collision. Clearly, the tip of the bat is free in a collision with the ball. However, the knob is held by the hands of the batter. \citet{crossSweetSpotBaseball1998} suggests that allowing the bat to be free on both ends is a sufficient approximation for the bat-ball collision. The timescales of the vibrations excited by the collision are much longer than the collision time. As a result, the wave in the bat does not reach the batters hands before the end of the collision. The motion of the bat on longer time scales is not the subject of interest for this paper, so it suffices to approximate the bat as free.
+
+To integrate the ordinary differential equations of interest, we take a different approach than \cite{nathanDynamicsBaseballBat2000a} and \cite{vanzandtDynamicalTheoryBaseball1992}. Previous solutions have been determined in the modal space, so they solve for the amplitudes of the normal modes. In our simulations, we take a direct approach and integrate for the displacements and shears of each slice of the bat.
+
+%IN THIS PAPER....
+In this paper,
+
+\section{Bat-Ball Collision Model}
+The bat and the ball are coupled together through a set of ordinary differential equations. In this section, we describe independently the models for the bat and the ball and their equations of motion. We then illustrate how they combine to form the bat-ball collision. We also discuss a method for extracting the energy fractions contained in each degree of freedom within our system.
+\subsection{The Bat}
+We first consider only the oscillations of a free bat. In accordance with Nathan and Van Zandt, we model the baseball bat discretely as a Timoshenko beam. We align the main axis of symmetry of the bat with the $z$-axis, and slice the bat into $N$ sections of thickness $dz$ perpendicular to the axis (see Figure \ref{fig:staticbat}). Each slice of the bat has two degrees of freedom. A slice can displace from the equilibrium position normal to the $z$-axis and also angularly with respect to the normal. We establish coordinates such that $i$th slice has vertical displacement $y_i$ and angular displacement $\phi_i$ (see Figure). In our examination, we solve for $\Phi_i = \phi_i dz$
+to maintain units of length. In total, our bat has $2N$ degrees of freedom.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.7\linewidth]{plots/bats.pdf}
+	\caption{Radial profiles used to define the discretized bat geometry in
+		both models. The top panel shows the standard bat profile and the bottom panel
+		shows the Torpedo bat profile, with each vertical slice corresponding to one
+		numerical element of width $dz = 0.1$ cm. The Torpedo bat redistributes radius,
+		and therefore mass and inertia, toward the mid-barrel region relative to the
+		standard profile.}
+	\label{fig:staticbat}
+\end{figure}
+
+Crucially, each bat has a measured longitudinal profile $\{R_i\}$, where $R_i$ represents the cross-sectional radius of the $i$th slice of the bat. The batter's hands grasp the knob, or the $0$th slice of the bat. The $N$th slice is refered to as the tip. For a solid wooden bat, each slice has cross-sectional area $A_i = \pi R_i^2$ and moment of intertia $I_i = \pi R_i^4 / 4$ about the $z$-axis. Our examination also requires three observed parameters, Young's modulus $Y_i$, shear modulus $S_i$, and density $\rho_i$. A bat is required to be constructed from a singe wooden
+piece \citep{zotero-item-662}, so we take the reasonable approximation that these parameters are uniform. Henceforth, the subscripts are dropped, and we refer to these parameters as $Y,
+	S,\rho$.
+
+The set of oridinary differential equations are presented here without justification. \citet{vanzandtDynamicalTheoryBaseball1992} thoroughly outlines his derivations of the motions of the bat, which are further improved upon by \citet{nathanDynamicsBaseballBat2000a}. In accordance with their work, each bat slice $i$ with displacement $y_i$ and shear $\Phi_i$ oscillates freely as
+\begin{equation}\label{eq:yode}
+	\ddot{y}_i = \underbrace{\frac{S}{\rho (dz)^2}}_{\text{bat shear}}\left[\underbrace{y_{i+1} + y_{i-1} -2y_i}_{\text{displacement from neighbours}} + \underbrace{\left(\frac{A_i-A_{i-1}}{A_i}\right)(y_i - y_{i-1} + \Phi_{i-1})}_{\text{correction for non-uniform cross-sections}} + \underbrace{(\Phi_i -\Phi_{i-1})}_{\text{dependence on rotation}}\right]
+\end{equation}
+and
+\begin{align}\label{eq:phiode}
+	\ddot{\Phi}_i = & \underbrace{\frac{Y}{\rho (dz)^2}}_{\text{bat stiffness}}\left[\underbrace{(\Phi_{i-1} + \Phi_{i+1} -2\Phi_i)}_{\text{angular displacement from neighbours}} + \underbrace{\left( \frac{I_i - I_{i-1}}{I_i} \right)(\Phi_i - \Phi_{i-1})}_{\text{correction for non-uniform cross-sections}} \right] \\ \nonumber &- \underbrace{\left(\frac{S}{2\rho I_i}\right)}_{\text{bat shear}}\left[\underbrace{A_i (y_{i+1} - y_{i-1} + \Phi_i + \Phi_{i-1})}_{\text{shear induced torque}}- \underbrace{(A_i - A_{i-1}) (y_i - y_{i-1} + \Phi_{i-1})}_{\text{correction for non-uniform cross-sections}}\right].
+\end{align}
+
+These equations of motion can be rearranged into the matrix equation
+\begin{equation}\label{eq:matrixeq}
+	\ddot{\vec{\psi}} = \mathbf{H}\vec{\psi}
+\end{equation}
+
+where the vector $\vec{\psi}$ is a concatenation of all slice displacements and rotations
+
+\begin{align}
+	\vec{\psi} & = \begin{bmatrix}
+		               y_1 \\ \vdots \\ y_N \\ \Phi_1 \\ \vdots \\ \Phi_N
+	               \end{bmatrix}.
+\end{align}
+
+The elements of the matrix $\mathbf{H}$ encode the coupling between neighbouring
+bat slices. Definitions of the elements of $\mathbf{H}$ and a visualization of
+matrix elements is supplied in Appendix (APPENDIX).
+
+
+In our examination, we use RK45 to directly integrate the system in Equation \ref{eq:matrixeq}. However, it is worth decomposing $\mathbf{H}$ into its eigenvector basis. An eigenvector $\Psi_n$ satisfies
+
+\begin{equation}\label{eq:eigveceq}
+	\ddot{\vec{\Psi}}_n = - \omega^2_n\vec{\Psi}_n.
+\end{equation}
+
+These eigenvectors correspond to the normal modes and frequencies of the bat. On the timescale of our collision ($<1$~ms), we only expect the first few modes with the lowest frequencies to be excited. Since the eigenvectors ${\vec{\Psi}_n}$ form a complete and orthonormal basis, we can take
+
+\begin{equation}
+	\vec{\psi} = \sum_n a_n(t)\vec{\Psi}_n.
+\end{equation}
+
+Nathan and Van Zandt integrate for $a_n(t)$, $\dot{a}_n(t)$ in their investigations.
+
+In the case that a bat is impacted by a force, we introduce a term in the right hand side of Equation \ref{eq:matrixeq}. We let the bat be impacted at a single slice, although it is straightforward to generalize to the multi-slice case. For a bat impacted at slice $k$ with force $F_k(t)$,
+
+\begin{equation}\label{eq:batforce}
+	\ddot{\vec{\psi}} = \mathbf{H} \vec{\psi} + \vec{F}(t)
+\end{equation}
+where
+\begin{equation}
+	\vec{F}(t) = \begin{bmatrix}
+		0 \\ \vdots \\ F_k(t) \\ \vdots\\ 0 \\
+	\end{bmatrix}.
+\end{equation}
+The vector $\vec{F}(t)$ is zero except for the $k$th term, which contains the force magnitude. Equation \ref{eq:batforce} governs the dynamics for the bat in a collision with the ball.
+
+\subsection{The Ball}
+
+The ball is significantly inelastic, so quantifying its force on the bat requires prior knowledge of energy-loss parameters. We use the coefficient of restitution (COR) $e_0$, which parametrizes the energy lost in a collision with an immovable rigid body. If the ball impacts such a body with speed $v_i$ and exits with speed $v_f$, then $e_0$ represents the ratio
+
+\begin{eqnarray}\label{eq:e0}
+	e_0 = \frac{v_f}{v_i}.
+\end{eqnarray}
+
+The energy dissipated in the collision is then
+
+\begin{equation}
+	E_{\mathrm{lost}} \propto v_i^2 - v_f^2 \propto 1 - e_{0}^2.
+\end{equation}
+
+The ball compresses and expands in response to a force. So, in accordance with \citet{crossImpactBallBat1999}, we model the ball as a nonlinear spring. We define the ball's compression as $u$, measured with respect to its natural radius $R_b$. We also define $y_b$ to be the position of the ball's centre of mass. We assume the ball compresses symmetrically during a collision.
+
+Since the ball is inelastic, it compresses and expands along two different force profiles, $F_c$ and $F_e$. Then, the energy lost is
+
+\begin{equation}\label{eq:elost}
+	E_{\mathrm{lost}} = \oint F(u) du \propto 1 - e_0^2
+\end{equation}
+The ball compresses according to
+
+\begin{equation}
+	F_c = k_c x^\alpha.
+\end{equation}
+
+Clearly, $\alpha = 2$ would result in an elastic spring. $\alpha$ is determined experimentally, and has a typical value of $\approx 1.5$ for a baseball. $k_c$ represents the stiffness of the ball, with typical values for a baseball on the order of $10^7$~N/m$^\alpha$. Similarly, the ball expands along
+
+\begin{equation}
+	F_e = k_e x^\beta.
+\end{equation}
+
+To preserve the relationship in Equation \ref{eq:elost},
+\begin{equation}
+	\beta = \frac{1 + \alpha}{e_0^2} - 1.
+\end{equation}
+
+Lastly, $k_e$ is evaluated to preserve continuity at the maximum compression $u_\mathrm{max}$
+
+\begin{equation}
+	k_e = k_c u_\mathrm{max}^{\alpha / \beta}.
+\end{equation}
+
+
+The resulting hysterisis curve defines the force exerted on a bat slice during a collision. The ball begins with $u = 0$, $\dot{u} > 0$, and $F_k(t) = F_c(u)$ while the ball is squishing against the bat. The ball stops compressing when $\dot{u} = 0$, and the force switches to $F_k(t) = F_e(u)$. When $u = 0$, $\dot{u} < 0$, the ball returns to its natural radius and $F_k(t) = 0$. 
+We define the collision time $t_{\mathrm{coll}}$ as the time at which the force
+decays to $1\%$ of the maximum impact force. Note the collision time is distinct from the time the ball and the bat separate. Since the impacted slice displaces, the force goes to $0$ while the bat and ball are still in contact.
+\section{Results}
+
+
+\subsection{Eigenvectors and Values of \texorpdfstring{$\mathbf{H}$}{H}}
+
+\begin{table}[htbp]
+	\centering
+	\begin{tabular}{|r|c|c|c|c|}
+		\hline
+		\multicolumn{1}{|c|}{} & \multicolumn{2}{c|}{\textbf{Standard}} & \multicolumn{2}{c|}{\textbf{Torpedo}}                                                                                              \\
+		\hline
+		\textbf{Mode} ($n$)    & Eigenvalue $-(\omega_n^{(s)}) ^2$      & $f_n^{(s)} = \frac{\omega_n^{(s)}}{2\pi}$ (Hz) & Eigenvalue $-(\omega_n^{(s)})^2$ & $f_n^{(T)} = \frac{\omega_n^{(T)}}{2\pi}$ (Hz) \\[1.5ex]
+		\hline
+		Rigid                  & $2.65\times 10^{-5}$                   & N/A                                            & $7.75\times 10^{-5}$             & N/A                                            \\
+		Rigid                  & $-1.97\times 10^{-5}$                  & N/A                                            & $-3.43\times 10^{-6}$            & N/A                                            \\
+		1                      & $-1.17 \times 10^{6}$                  & $172.38$                                       & $-8.39\times 10^5$               & $ 145.77$                                      \\
+		2                      & $-1.30 \times 10^7$                    & $574.29$                                       & $-1.04 \times 10^7$              & $ 515.04$                                      \\
+		3                      & $-5.48\times 10^7$                     & $1178.63$                                      & $-4.43 \times 10^7$              & $1059.49$                                      \\
+		4                      & $-1.35\times 10^8$                     & $1847.03$                                      & $-1.08\times 10^8$               & $1656.70$                                      \\
+		5                      & $-2.62\times 10^8$                     & $2577.47$                                      & $-2.11\times 10^8$               & $2309.65$                                      \\
+		\hline
+	\end{tabular}
+	\caption{Lowest normal-mode eigenvalues and frequencies for the standard and Torpedo bats. Columns list mode index $n$, eigenvalue $-(\omega_n)^2$, and corresponding frequency $f_n = \omega_n/(2\pi)$ for each bat, and the first two rows are rigid-body modes with near-zero frequency. Both bats share the same qualitative modal structure, while the Torpedo bat exhibits slightly lower frequencies for the first elastic modes.}
+	\label{tab:eigvals}
+\end{table}
+
+
+
+
+
+\section{Discussion}
+
+\clearpage
+\appendix
+\section{Matrix Component Tables}
+
+\begin{table}[htbp]
+	\centering
+	{\renewcommand{\arraystretch}{1.6}
+		\begin{tabular}{|p{0.1\textwidth}|p{0.4\textwidth}|p{0.4\textwidth}|}
+			\hline
+			                  & \textbf{Quadrant 1}                                                                                                                          & \textbf{Quadrant 2}           \\
+			\hline
+			\textbf{Diagonal} & relevant indices $\{(i, i)\}$                                                                                                                & relevant indices $\{(i, j)\}$ \\
+
+			\hline \hline
+			Upper
+			                  & $\displaystyle H_{i,i+1} = \Lambda$
+			                  & $\displaystyle H_{i, j+1} = \frac{\Lambda}{2}$
+			\\
+			Main
+			                  & $\displaystyle H_{i,i} = -\Lambda\left(1+\frac{A_{i-1}}{A_i}\right)$
+			                  & $\displaystyle H_{i, j} = \frac{\Lambda}{2}\left(1 - \frac{A_{i-1}}{A_i}\right)$
+			\\
+			Lower
+			                  & $\displaystyle H_{i,i-1} = \Lambda \frac{A_{i-1}}{A_i}$
+			                  & $\displaystyle H_{i, j-1} = -\Lambda \frac{A_{i-1}}{2A_i}$
+			\\
+
+			\hline
+			\hline
+			                  & \textbf{Quadrant 3}                                                                                                                          & \textbf{Quadrant 4}           \\
+			\hline
+			\textbf{Diagonal} & relevant indices $\{(j, i)\}$                                                                                                                & relevant indices $\{(j, j)\}$ \\
+
+			\hline \hline
+			Upper
+			                  & $\displaystyle H_{j,i+1} = -\Lambda \frac{A_i(dz)^2}{2I_i}$
+			                  & $\displaystyle H_{j, j+1} = \Upsilon - \Lambda \frac{A_i (dz^2)}{4I_i}$
+			\\
+			Main
+			% & $\displaystyle H_{j,i} = \Lambda \frac{A_i (dz)^2}{2I_i}\left(1 - \frac{A_{i-1}}{A_i}\right)$
+			                  & $\displaystyle H_{j, j} = -\Upsilon\left(1 + \frac{I_{i-1}}{I_i}\right) - \Lambda\frac{A_i (dz)^2}{4I_i}\left(1+\frac{A_{i-1}}{A_i}\right) $
+			\\
+			Lower
+			                  & $\displaystyle H_{j,i-1} = \Lambda \frac{A_{i-1}(dz)^2}{2I_i}$
+			                  & $\displaystyle H_{i, j-1} = -\Upsilon\left(\frac{I_{i-1}}{I_i}\right) - \Lambda\frac{A_i (dz)^2}{4I_i}$
+
+			\\
+			\hline
+		\end{tabular}
+	}
+	\caption{Central (interior-slice) coefficient definitions for the system matrix $\mathbf{H}$. Rows are split by upper, main, and lower diagonals and columns are split by Quadrants 1--4, with each expression giving a nonzero coefficient for interior indices $i\in\{2,\dots,N-1\}$. All interior couplings are nearest-neighbor and parameterized by local area and inertia ratios, producing a sparse tridiagonal block structure.}
+	\label{tab:Hcomps}
+\end{table}
+
+\begin{table}[htbp]
+	\centering
+	{\renewcommand{\arraystretch}{1.6}
+		\begin{tabular}{|p{0.1\textwidth}|p{0.4\textwidth}|p{0.4\textwidth}|}
+			\hline
+			                  & \textbf{Quadrant 1}                                                                                                                          & \textbf{Quadrant 2}           \\
+			\hline
+			\textbf{Boundary} & relevant indices $\{(i, i)\}$                                                                                                                & relevant indices $\{(i, j)\}$ \\
+
+			\hline \hline
+			Knob
+			                  & $\displaystyle H_{1,1} = -\Lambda$
+			                  & $\displaystyle H_{1, N+1} = \frac{\Lambda}{2}$
+			\\
+			                  & $\displaystyle H_{1, 2} = \Lambda$
+			                  & $\displaystyle H_{1, N+2} = \frac{\Lambda}{2}$
+			\\
+
+			Tip
+			                  & $\displaystyle H_{N,N-1} = \Lambda \frac{A_{N-1}}{A_N}$
+			                  & $\displaystyle H_{N, 2N-1} = -\Lambda \frac{A_{N-1}}{2A_N}$
+			\\
+
+			                  & $\displaystyle H_{N,N} = -\Lambda \frac{A_{N-1}}{A_N}$
+			                  & $\displaystyle H_{N, 2N} = -\Lambda \frac{A_{N-1}}{2A_N}$
+			\\
+
+
+			\hline
+			\hline
+			                  & \textbf{Quadrant 3}                                                                                                                          & \textbf{Quadrant 4}           \\
+			\hline
+			\textbf{Boundary} & relevant indices $\{(j, i)\}$                                                                                                                & relevant indices $\{(j, j)\}$ \\
+
+			\hline \hline
+			Knob
+			                  & $\displaystyle H_{N+1, 1} = -\Lambda \frac{A_N(dz)^2}{4I_N}$
+			                  & $\displaystyle H_{j, j+1} = \Upsilon - \Lambda \frac{A_i (dz^2)}{4I_i}$
+			\\
+			Main
+			                  & $\displaystyle H_{j,i} = \Lambda \frac{A_i (dz)^2}{2I_i}\left(1 - \frac{A_{i-1}}{A_i}\right)$
+			                  & $\displaystyle H_{j, j} = -\Upsilon\left(1 + \frac{I_{i-1}}{I_i}\right) - \Lambda\frac{A_i (dz)^2}{4I_i}\left(1+\frac{A_{i-1}}{A_i}\right) $
+			\\
+			\hline
+		\end{tabular}
+	}
+	\caption{Boundary (knob and tip) coefficient definitions for the system matrix $\mathbf{H}$. Entries list nonzero matrix elements for boundary rows in each quadrant, replacing interior formulas where free-end conditions modify the coefficients. These boundary corrections are essential to enforce physically consistent free-end force and torque behavior in the discretized bat model.}
+	\label{tab:Hboundary}
+\end{table}
+
+\begin{table}[htbp]
+	\centering
+	\begin{tabular}{|r|c|c|c|c|l|}
+		\hline
+		\multicolumn{1}{|c|}{} & \multicolumn{2}{c|}{\textbf{Simulation 1}} & \multicolumn{2}{c|}{\textbf{Simulation 2}} & \multicolumn{1}{c|}{}                                               \\
+		\hline
+		Property               & \textbf{Standard Bat}                      & \textbf{Torpedo Bat}                       & \textbf{Standard}     & \textbf{Torpedo} & Units                    \\
+		\hline
+		Bat Length             & 0.84                                       & 0.85                                       & 0.84                  & 0.84             & m                        \\
+		Density $\rho$         & 649                                        & 690                                        & 690                   & 690              & kg/m$^3$                 \\
+		Shear Modulus $S$      & 1.05                                       & 0.9                                        & 1.0                   & 0.9              & $\times 10^{9}$ N/m$^2$  \\
+		Young's Modulus $Y$    & 1.814                                      & 1.650                                      & 1.64                  & 1.65             & $\times 10^{10}$ N/m$^2$ \\
+		\hline \hline
+		Slice Width $dz$       & 0.01                                       & 0.01                                       & 0.01                  & 0.01             & m                        \\
+		Num. Slices $N$        & 84                                         & 85                                         & 85                    & 85               & slices                   \\
+		\hline
+	\end{tabular}
+	\caption{Input bat properties used across the two collision simulations. Columns report standard and Torpedo values for Simulation 1 and Simulation 2, while rows list geometric and material parameters ($L$, $\rho$, $S$, $Y$, $dz$, and $N$). Simulation 1 compares realistic but materially different bats, whereas Simulation 2 controls density and stiffness to isolate the effect of bat shape.}
+	\label{tab:batprops}
+\end{table}
+
+
+\begin{table}[htbp]
+	\centering
+	\begin{tabular}{|r|ccc|}
+		\hline
+		\textbf{Parameter}         & \textbf{Symbol} & \textbf{Value}       & \textbf{Unit}  \\
+		\hline
+		Mass                       & $m_b$           & 0.146                & kg             \\
+		Radius                     & $R_b$           & 0.0366               & m              \\
+		Initial Velocity           & $v_{b,0}$       & 44.704               & m/s            \\
+		Coefficient of Restitution & $e_0$           & 0.50                 & dimensionless  \\
+		Compression Constant       & $k_1$           & $0.714\times 10^{7}$ & N/m$^{\alpha}$ \\
+		Compression Exponent       & $\alpha$        & 1.36                 & dimensionless  \\
+		\hline
+	\end{tabular}
+	\caption{Baseball model parameters used in all integrations. Rows list mass, radius, initial relative impact speed, coefficient of restitution $e_0$, compression constant $k_1$, and compression exponent $\alpha$ for the nonlinear lossy-spring ball model. These fixed ball parameters define the compression-expansion force law and allow direct comparison of bat-dependent outcomes.}
+	\label{tab:ball}
+\end{table}
+
+
+
+
+\begin{acknowledgments}
+
+\end{acknowledgments}
+
+\nocite{*}
+\bibliographystyle{aasjournalv7}
+\bibliography{references}
+
+\end{document}
